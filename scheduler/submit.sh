@@ -1,3 +1,3 @@
 #!/bin/bash
 
-curl -X POST -F submission=@"$1" localhost:8080/submit
+curl -X POST -F submission=@"$1" http://lxchecker.andreiduma.ro/submit

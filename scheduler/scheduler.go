@@ -135,5 +135,5 @@ func main() {
 	http.HandleFunc("/submit", SubmitHandler)
 	http.HandleFunc("/result", ResultHandler)
 
-	panic(http.ListenAndServe(":8080", nil))
+	panic(http.ListenAndServe(":80", nil))
 }
