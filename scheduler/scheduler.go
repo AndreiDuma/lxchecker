@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
@@ -116,7 +115,7 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	options := SubmitOptions{
-		Image:      "so_tema3",
+		Image:      "andreiduma/lxchecker_so_tema3",
 		Submission: fileBytes, // TODO: send this as an io.Reader
 	}
 	response, err := Submit(context.Background(), options)
@@ -129,30 +128,12 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ResultHandler(w http.ResponseWriter, req *http.Request) {
+	// TODO
 }
 
 func main() {
 	http.HandleFunc("/submit", SubmitHandler)
 	http.HandleFunc("/result", ResultHandler)
+
 	panic(http.ListenAndServe(":8080", nil))
-
-	// TODO: get the submission from client
-	archivePath := "DUMA.zip"
-	archive, err := ioutil.ReadFile(archivePath)
-	if err != nil {
-		panic(err)
-	}
-
-	response, err := Submit(context.Background(), SubmitOptions{
-		Image:      "so_tema3",
-		Submission: archive,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = io.Copy(os.Stdout, response.Logs)
-	if err != nil && err != io.EOF {
-		panic(err)
-	}
 }
