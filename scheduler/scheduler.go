@@ -3,9 +3,12 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
@@ -43,21 +46,18 @@ type SubmitResponse struct {
 	ExitCode int
 }
 
+var (
+	docker *client.Client
+)
+
 func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) {
 	r := SubmitResponse{}
-
-	// TODO: make docker host configurable (ENV?)
-	// TODO: move this outside of Submit
-	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.22", nil, nil)
-	if err != nil {
-		return r, err
-	}
 
 	// create the container
 	config := &container.Config{
 		Image: options.Image,
 	}
-	container, err := cli.ContainerCreate(ctx, config, nil, nil, "")
+	container, err := docker.ContainerCreate(ctx, config, nil, nil, "")
 	if err != nil {
 		return r, err
 	}
@@ -74,18 +74,18 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 		Path:        "/submission/", // TODO: make this configurable
 		Content:     tar,
 	}
-	if err = cli.CopyToContainer(ctx, copyOptions); err != nil {
+	if err = docker.CopyToContainer(ctx, copyOptions); err != nil {
 		return r, err
 	}
 
 	// start the container
-	if err = cli.ContainerStart(ctx, container.ID); err != nil {
+	if err = docker.ContainerStart(ctx, container.ID); err != nil {
 		return r, err
 	}
 
 	// wait for the container to exit
 	// TODO: add timeout here
-	r.ExitCode, err = cli.ContainerWait(ctx, container.ID)
+	r.ExitCode, err = docker.ContainerWait(ctx, container.ID)
 	if err != nil {
 		return r, err
 	}
@@ -95,7 +95,7 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 		ShowStdout: true,
 		ShowStderr: true,
 	}
-	r.Logs, err = cli.ContainerLogs(ctx, container.ID, logsOptions)
+	r.Logs, err = docker.ContainerLogs(ctx, container.ID, logsOptions)
 	if err != nil {
 		return r, err
 	}
@@ -132,8 +132,23 @@ func ResultHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
+	if os.Getenv("DOCKER_HOST") == "" || os.Getenv("DOCKER_API_VERSION") == "" {
+		panic(errors.New("DOCKER_HOST and DOCKER_API_VERSION environment variables need to be set"))
+	}
+
+	var err error
+	docker, err = client.NewEnvClient()
+	if err != nil {
+		panic(err)
+	}
+
 	http.HandleFunc("/submit", SubmitHandler)
 	http.HandleFunc("/result", ResultHandler)
 
-	panic(http.ListenAndServe(":80", nil))
+	host := os.Getenv("LXCHECKER_SCHEDULER_HOST")
+	if host == "" {
+		host = ":5000"
+	}
+	fmt.Printf("Scheduler listening on %s...\n", host)
+	panic(http.ListenAndServe(host, nil))
 }
