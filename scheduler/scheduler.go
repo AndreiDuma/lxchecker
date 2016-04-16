@@ -3,10 +3,10 @@ package main
 import (
 	"archive/tar"
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 
@@ -53,19 +53,28 @@ var (
 func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) {
 	r := SubmitResponse{}
 
+	// pull the required image from the registry
+	reader, err := docker.ImagePull(ctx, options.Image, types.ImagePullOptions{})
+	if err != nil {
+		return r, fmt.Errorf("Failed to pull image: %v", err)
+	}
+	// wait for the pull to finish
+	io.Copy(ioutil.Discard, reader)
+	reader.Close()
+
 	// create the container
 	config := &container.Config{
 		Image: options.Image,
 	}
 	container, err := docker.ContainerCreate(ctx, config, nil, nil, "")
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("Failed to create container: %v", err)
 	}
 
 	// tar the submission
 	tar, err := tarSubmission(options.Submission)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("Couldn't tar submission: %v", err)
 	}
 
 	// copy submission to container
@@ -75,19 +84,19 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 		Content:     tar,
 	}
 	if err = docker.CopyToContainer(ctx, copyOptions); err != nil {
-		return r, err
+		return r, fmt.Errorf("Failed to copy submission to container: %v", err)
 	}
 
 	// start the container
 	if err = docker.ContainerStart(ctx, container.ID); err != nil {
-		return r, err
+		return r, fmt.Errorf("Failed to start container: %v", err)
 	}
 
 	// wait for the container to exit
 	// TODO: add timeout here
 	r.ExitCode, err = docker.ContainerWait(ctx, container.ID)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("Wait failed: %v", err)
 	}
 
 	// get container logs
@@ -97,7 +106,7 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 	}
 	r.Logs, err = docker.ContainerLogs(ctx, container.ID, logsOptions)
 	if err != nil {
-		return r, err
+		return r, fmt.Errorf("Couldn't get logs from container: %v", err)
 	}
 	return r, nil
 }
@@ -105,12 +114,13 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 	file, _, err := r.FormFile("submission")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "missing required `submission` field", http.StatusBadRequest)
 		return
 	}
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		http.Error(w, "Error while processing the uploaded file", http.StatusInternalServerError)
 		return
 	}
 
@@ -120,11 +130,16 @@ func SubmitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	response, err := Submit(context.Background(), options)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+		http.Error(w, "Submission could not be tested", http.StatusInternalServerError)
 		return
 	}
 
-	io.Copy(w, response.Logs)
+	_, err = io.Copy(w, response.Logs)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error while returning the logs", http.StatusInternalServerError)
+	}
 }
 
 func ResultHandler(w http.ResponseWriter, req *http.Request) {
@@ -132,14 +147,16 @@ func ResultHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	if os.Getenv("DOCKER_HOST") == "" || os.Getenv("DOCKER_API_VERSION") == "" {
-		panic(errors.New("DOCKER_HOST and DOCKER_API_VERSION environment variables need to be set"))
-	}
+	/*
+		if os.Getenv("DOCKER_HOST") == "" || os.Getenv("DOCKER_API_VERSION") == "" {
+			log.Fatalln("DOCKER_HOST and DOCKER_API_VERSION environment variables need to be set")
+		}
+	*/
 
 	var err error
 	docker, err = client.NewEnvClient()
 	if err != nil {
-		panic(err)
+		log.Fatalln("couldn't create Docker client")
 	}
 
 	http.HandleFunc("/submit", SubmitHandler)
@@ -149,6 +166,6 @@ func main() {
 	if host == "" {
 		host = ":5000"
 	}
-	fmt.Printf("Scheduler listening on %s...\n", host)
-	panic(http.ListenAndServe(host, nil))
+	log.Printf("Scheduler listening on %s...\n", host)
+	log.Fatalln(http.ListenAndServe(host, nil))
 }
