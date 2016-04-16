@@ -156,7 +156,7 @@ func main() {
 	var err error
 	docker, err = client.NewEnvClient()
 	if err != nil {
-		log.Fatalln("couldn't create Docker client")
+		log.Fatalf("couldn't create Docker client: %v\n", err)
 	}
 
 	http.HandleFunc("/submit", SubmitHandler)
