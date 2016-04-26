@@ -1,4 +1,4 @@
-package main
+package scheduler
 
 import (
 	"archive/tar"
@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
+	"time"
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
@@ -16,12 +14,14 @@ import (
 	"golang.org/x/net/context"
 )
 
-func tarSubmission(submission []byte) (io.Reader, error) {
+// makeSubmissionTar creates a tar archive from `submission`.
+// The submission is place at `path` inside the archive.
+func makeSubmissionTar(submission []byte, path string) (io.Reader, error) {
 	buffer := new(bytes.Buffer)
 	tw := tar.NewWriter(buffer)
 
 	if err := tw.WriteHeader(&tar.Header{
-		Name: "submission.zip", // TODO: make this configurable
+		Name: path,
 		Mode: 0444,
 		Size: int64(len(submission)),
 	}); err != nil {
@@ -36,11 +36,15 @@ func tarSubmission(submission []byte) (io.Reader, error) {
 	return buffer, nil
 }
 
+// SubmitOptions holds parameters for Submit.
 type SubmitOptions struct {
-	Image      string
-	Submission []byte
+	Image          string
+	Submission     []byte
+	SubmissionPath string
+	Timeout        time.Duration
 }
 
+// SubmitResponse holds data returned from Submit.
 type SubmitResponse struct {
 	Logs     io.Reader
 	ExitCode int
@@ -50,17 +54,38 @@ var (
 	docker *client.Client
 )
 
+// TODO: implement Submit as a method on Scheduler, remove Init.
+type Scheduler struct {
+	docker *client.Client
+}
+
+// Init initializes the Docker client.
+func Init() error {
+	var err error
+	docker, err = client.NewEnvClient()
+	if err != nil {
+		return fmt.Errorf("couldn't create Docker client: %v", err)
+	}
+	return nil
+}
+
+// Submit prepares a submission, creates a container for it, starts it, waits
+// for it to exit and returns the logs.
 func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) {
 	r := SubmitResponse{}
 
 	// pull the required image from the registry
+	// TODO: figure out a way to make this faster
 	reader, err := docker.ImagePull(ctx, options.Image, types.ImagePullOptions{})
 	if err != nil {
 		return r, fmt.Errorf("Failed to pull image: %v", err)
 	}
 	// wait for the pull to finish
-	io.Copy(ioutil.Discard, reader)
+	if _, err := io.Copy(ioutil.Discard, reader); err != nil {
+		return r, fmt.Errorf("Error while waiting for image pull to finish: %v", err)
+	}
 	reader.Close()
+	_ = ioutil.Discard
 
 	// create the container
 	config := &container.Config{
@@ -72,7 +97,7 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 	}
 
 	// tar the submission
-	tar, err := tarSubmission(options.Submission)
+	tar, err := makeSubmissionTar(options.Submission, options.SubmissionPath)
 	if err != nil {
 		return r, fmt.Errorf("Couldn't tar submission: %v", err)
 	}
@@ -80,7 +105,7 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 	// copy submission to container
 	copyOptions := types.CopyToContainerOptions{
 		ContainerID: container.ID,
-		Path:        "/submission/", // TODO: make this configurable
+		Path:        "/",
 		Content:     tar,
 	}
 	if err = docker.CopyToContainer(ctx, copyOptions); err != nil {
@@ -93,8 +118,9 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 	}
 
 	// wait for the container to exit
-	// TODO: add timeout here
-	r.ExitCode, err = docker.ContainerWait(ctx, container.ID)
+	ctxWait, cancel := context.WithTimeout(ctx, options.Timeout)
+	r.ExitCode, err = docker.ContainerWait(ctxWait, container.ID)
+	cancel()
 	if err != nil {
 		return r, fmt.Errorf("Wait failed: %v", err)
 	}
@@ -109,63 +135,4 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 		return r, fmt.Errorf("Couldn't get logs from container: %v", err)
 	}
 	return r, nil
-}
-
-func SubmitHandler(w http.ResponseWriter, r *http.Request) {
-	file, _, err := r.FormFile("submission")
-	if err != nil {
-		http.Error(w, "missing required `submission` field", http.StatusBadRequest)
-		return
-	}
-	fileBytes, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error while processing the uploaded file", http.StatusInternalServerError)
-		return
-	}
-
-	options := SubmitOptions{
-		Image:      "andreiduma/lxchecker_so_tema3",
-		Submission: fileBytes, // TODO: send this as an io.Reader
-	}
-	response, err := Submit(context.Background(), options)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Submission could not be tested", http.StatusInternalServerError)
-		return
-	}
-
-	_, err = io.Copy(w, response.Logs)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error while returning the logs", http.StatusInternalServerError)
-	}
-}
-
-func ResultHandler(w http.ResponseWriter, req *http.Request) {
-	// TODO
-}
-
-func main() {
-	/*
-		if os.Getenv("DOCKER_HOST") == "" || os.Getenv("DOCKER_API_VERSION") == "" {
-			log.Fatalln("DOCKER_HOST and DOCKER_API_VERSION environment variables need to be set")
-		}
-	*/
-
-	var err error
-	docker, err = client.NewEnvClient()
-	if err != nil {
-		log.Fatalf("couldn't create Docker client: %v\n", err)
-	}
-
-	http.HandleFunc("/submit", SubmitHandler)
-	http.HandleFunc("/result", ResultHandler)
-
-	host := os.Getenv("LXCHECKER_SCHEDULER_HOST")
-	if host == "" {
-		host = ":5000"
-	}
-	log.Printf("Scheduler listening on %s...\n", host)
-	log.Fatalln(http.ListenAndServe(host, nil))
 }
