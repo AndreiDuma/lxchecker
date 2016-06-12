@@ -50,33 +50,29 @@ type SubmitResponse struct {
 	ExitCode int
 }
 
-var (
-	docker *client.Client
-)
-
-// TODO: implement Submit as a method on Scheduler, remove Init.
 type Scheduler struct {
-	docker *client.Client
+	cli *client.Client
 }
 
-// Init initializes the Docker client.
-func Init() error {
+// New creates a new scheduler object, encapsulating a connection to a Docker
+// host.
+func New() (*Scheduler, error) {
 	var err error
-	docker, err = client.NewEnvClient()
-	if err != nil {
-		return fmt.Errorf("couldn't create Docker client: %v", err)
+	scheduler := &Scheduler{}
+	if scheduler.cli, err = client.NewEnvClient(); err != nil {
+		return nil, fmt.Errorf("failed to create client to Docker: %v", err)
 	}
-	return nil
+	return scheduler, nil
 }
 
 // Submit prepares a submission, creates a container for it, starts it, waits
 // for it to exit and returns the logs.
-func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) {
+func (scheduler *Scheduler) Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) {
 	r := SubmitResponse{}
 
 	// pull the required image from the registry
 	// TODO: figure out a way to make this faster
-	reader, err := docker.ImagePull(ctx, options.Image, types.ImagePullOptions{})
+	reader, err := scheduler.cli.ImagePull(ctx, options.Image, types.ImagePullOptions{})
 	if err != nil {
 		return r, fmt.Errorf("Failed to pull image: %v", err)
 	}
@@ -91,7 +87,7 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 	config := &container.Config{
 		Image: options.Image,
 	}
-	container, err := docker.ContainerCreate(ctx, config, nil, nil, "")
+	container, err := scheduler.cli.ContainerCreate(ctx, config, nil, nil, "")
 	if err != nil {
 		return r, fmt.Errorf("Failed to create container: %v", err)
 	}
@@ -108,18 +104,18 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 		Path:        "/",
 		Content:     tar,
 	}
-	if err = docker.CopyToContainer(ctx, copyOptions); err != nil {
+	if err = scheduler.cli.CopyToContainer(ctx, copyOptions); err != nil {
 		return r, fmt.Errorf("Failed to copy submission to container: %v", err)
 	}
 
 	// start the container
-	if err = docker.ContainerStart(ctx, container.ID); err != nil {
+	if err = scheduler.cli.ContainerStart(ctx, container.ID); err != nil {
 		return r, fmt.Errorf("Failed to start container: %v", err)
 	}
 
 	// wait for the container to exit
 	ctxWait, cancel := context.WithTimeout(ctx, options.Timeout)
-	r.ExitCode, err = docker.ContainerWait(ctxWait, container.ID)
+	r.ExitCode, err = scheduler.cli.ContainerWait(ctxWait, container.ID)
 	cancel()
 	if err != nil {
 		return r, fmt.Errorf("Wait failed: %v", err)
@@ -130,7 +126,7 @@ func Submit(ctx context.Context, options SubmitOptions) (SubmitResponse, error) 
 		ShowStdout: true,
 		ShowStderr: true,
 	}
-	r.Logs, err = docker.ContainerLogs(ctx, container.ID, logsOptions)
+	r.Logs, err = scheduler.cli.ContainerLogs(ctx, container.ID, logsOptions)
 	if err != nil {
 		return r, fmt.Errorf("Couldn't get logs from container: %v", err)
 	}
