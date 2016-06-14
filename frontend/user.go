@@ -25,11 +25,14 @@ type User struct {
 	Password string
 }
 
+// GetUser returns the currently logged in user or nil if there is none.
 func GetUser(r *http.Request) *User {
 	user, _ := context.Get(r, "user").(*User)
 	return user
 }
 
+// RequireAuth middleware makes sure users are logged in by first redirecting
+// them to the login page.
 func RequireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireLogin := func() {
@@ -63,6 +66,7 @@ func RequireAuth(next http.Handler) http.Handler {
 	})
 }
 
+// LoginTmplHandler serves the login pages.
 func LoginTmplHandler(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.FormValue("continue")
 	loginTmpl.Execute(w, struct {
@@ -70,6 +74,7 @@ func LoginTmplHandler(w http.ResponseWriter, r *http.Request) {
 	}{continueURL})
 }
 
+// LoginHandler checkes the user's credentials and creates a session.
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	retryLogin := func() {
 		loginURL := "/login?error=true"
@@ -83,7 +88,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Get username from request.
 	username := r.FormValue("username")
 	if username == "" {
-		// TODO: flash error.
 		retryLogin()
 		return
 	}
@@ -92,7 +96,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: use password hash instead of plain-text password.
 	password := r.FormValue("password")
 	if password == "" {
-		// TODO: flash error.
 		retryLogin()
 		return
 	}
@@ -101,7 +104,6 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	c := mongo.DB("lxchecker").C("users")
 	if err := c.Find(bson.M{"username": username, "password": password}).One(&user); err != nil {
 		if err == mgo.ErrNotFound {
-			// TODO: flash error.
 			retryLogin()
 			return
 		}
@@ -123,6 +125,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/-/", http.StatusFound)
 }
 
+// LogoutHandler delete's a user's session, logging them out.
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "auth")
 	session.Options.MaxAge = -1
