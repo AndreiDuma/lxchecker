@@ -56,13 +56,13 @@ type Scheduler struct {
 
 // New creates a new scheduler object, encapsulating a connection to a Docker
 // host.
-func New() (*Scheduler, error) {
+func New() *Scheduler {
 	var err error
 	scheduler := &Scheduler{}
 	if scheduler.cli, err = client.NewEnvClient(); err != nil {
-		return nil, fmt.Errorf("failed to create client to Docker: %v", err)
+		panic(err)
 	}
-	return scheduler, nil
+	return scheduler
 }
 
 // Submit prepares a submission, creates a container for it, starts it, waits
