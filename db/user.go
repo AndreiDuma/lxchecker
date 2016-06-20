@@ -9,6 +9,7 @@ import (
 type User struct {
 	Username string
 	Password string
+	IsAdmin  bool
 }
 
 func GetUser(username string) (*User, error) {
@@ -36,4 +37,15 @@ func GetUserAuth(username, password string) (*User, error) {
 		panic(err)
 	}
 	return &u, nil
+}
+
+func InsertUser(u User) error {
+	c := mongo.DB("lxchecker").C("users")
+	if err := c.Insert(u); err != nil {
+		if mgo.IsDup(err) {
+			return ErrAlreadyExists
+		}
+		panic(err)
+	}
+	return nil
 }

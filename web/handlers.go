@@ -1,11 +1,10 @@
-package web
+package main
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/AndreiDuma/lxchecker/db"
-	"github.com/AndreiDuma/lxchecker/util"
 )
 
 var (

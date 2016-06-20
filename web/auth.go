@@ -9,10 +9,11 @@ import (
 )
 
 var (
-	loginTmpl = template.Must(template.ParseFiles("templates/login.html"))
+	loginTmpl  = template.Must(template.ParseFiles("templates/login.html"))
+	signupTmpl = template.Must(template.ParseFiles("templates/signup.html"))
 )
 
-// LoginTmplHandler serves the login pages.
+// LoginTmplHandler serves the login page.
 func LoginTmplHandler(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.FormValue("continue")
 	loginTmpl.Execute(w, struct {
@@ -75,4 +76,62 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session.Options.MaxAge = -1
 	session.Save(r, w)
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// SignupTmplHandler serves the sign up page.
+func SignupTmplHandler(w http.ResponseWriter, r *http.Request) {
+	continueURL := r.FormValue("continue")
+	signupTmpl.Execute(w, struct {
+		ContinueURL string
+	}{continueURL})
+}
+
+// SignupHandler creates a new account.
+func SignupHandler(w http.ResponseWriter, r *http.Request) {
+	retrySignup := func() {
+		signupURL := "/signup?error=true"
+		continueURL := r.FormValue("continue")
+		if continueURL != "" {
+			signupURL += "&continue=" + continueURL
+		}
+		http.Redirect(w, r, signupURL, http.StatusFound)
+	}
+
+	u := db.User{}
+
+	// Get username from request.
+	u.Username = r.FormValue("username")
+	if u.Username == "" {
+		retrySignup()
+		return
+	}
+
+	// Get password from request.
+	// TODO: use password hash instead of plain-text password.
+	u.Password = r.FormValue("password")
+	if u.Password == "" {
+		retrySignup()
+		return
+	}
+
+	// Insert user.
+	if err := db.InsertUser(u); err != nil {
+		if err == db.ErrAlreadyExists {
+			retrySignup()
+		}
+		panic(err)
+	}
+
+	// Set auth cookie.
+	session, _ := config.CookieStore.Get(r, "auth")
+	session.Values["username"] = u.Username
+	session.Save(r, w)
+
+	// Redirect to `continueURL`.
+	continueURL := r.FormValue("continue")
+	if continueURL != "" {
+		http.Redirect(w, r, continueURL, http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, "/-/", http.StatusFound)
 }

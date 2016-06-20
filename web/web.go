@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,19 +21,6 @@ var (
 	router = mux.NewRouter().StrictSlash(true)
 )
 
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: add a proper index page instead of redirecting to login.
-	http.Redirect(w, r, "/login", http.StatusFound)
-}
-
-func ListSubjectsHandler(w http.ResponseWriter, r *http.Request) {
-	for _, s := range db.GetAllSubjects() {
-		fmt.Fprintf(w, "Id: %v, Name: %v\n", s.Id, s.Name)
-	}
-
-	fmt.Fprintf(w, "\nUser: %v\n", util.CurrentUser(r).Username)
-}
-
 func main() {
 	// Connect to Docker.
 	sched = scheduler.New()
@@ -46,13 +32,15 @@ func main() {
 
 	// Setup handlers.
 	// TODO: wrap router with gorrila/handlers/recovery handler.
-	router.HandleFunc("/", IndexHandler).Methods("GET")
+	router.HandleFunc("/", LandingHandler).Methods("GET")
 	router.HandleFunc("/login", LoginTmplHandler).Methods("GET")
 	router.HandleFunc("/login", LoginHandler).Methods("POST")
+	router.HandleFunc("/signup", SignupTmplHandler).Methods("GET")
+	router.HandleFunc("/signup", SignupHandler).Methods("POST")
 	router.HandleFunc("/logout", LogoutHandler).Methods("GET") // TODO: make this POST.
 
 	sub := router.PathPrefix("/-/").Subrouter()
-	sub.Handle("/", util.RequireAuth(http.HandlerFunc(ListSubjectsHandler))).Methods("GET").Name("index")
+	sub.Handle("/", util.RequireAuth(http.HandlerFunc(IndexHandler))).Methods("GET").Name("index")
 	sub.Handle("/{id}/", util.RequireAuth(http.HandlerFunc(GetSubjectHandler))).Methods("GET").Name("subject")
 	sub.Handle("/{subject_id}/{id}/", util.RequireAuth(http.HandlerFunc(GetAssignmentHandler))).Methods("GET").Name("assignment")
 	sub.Handle("/{subject_id}/{assignment_id}/{id}/", util.RequireAuth(http.HandlerFunc(GetSubmissionHandler))).Methods("GET").Name("submission")
