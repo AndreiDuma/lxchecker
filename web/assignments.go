@@ -1,8 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
+	"html/template"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -15,8 +14,7 @@ import (
 var (
 	validAssignmentId = regexp.MustCompile(`[a-z]+[0-9a-z]+`)
 
-	ErrAssignmentExists = errors.New("assignment already exists")
-	ErrNoSuchAssignment = errors.New("no such assignment")
+	assignmentTmpl = template.Must(template.ParseFiles("templates/assignment.html"))
 )
 
 func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -98,11 +96,32 @@ func GetAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	submissions := db.GetAllSubmissions(subjectId, id)
-	b, err := json.Marshal(submissions)
+	subject, err := db.GetSubject(subjectId)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+		if err == db.ErrNotFound {
+			http.Error(w, "no subject matching given `subject_id`", http.StatusNotFound)
+			return
+		}
+		panic(err)
 	}
-	w.Write(b)
+	assignment, err := db.GetAssignment(subjectId, id)
+	if err != nil {
+		if err == db.ErrNotFound {
+			http.Error(w, "no assignment matching given `subject_id` and `id`", http.StatusNotFound)
+			return
+		}
+		panic(err)
+	}
+
+	// Render template.
+	type D struct {
+		Subject     *db.Subject
+		Assignment  *db.Assignment
+		Submissions []db.Submission
+	}
+	assignmentTmpl.Execute(w, &D{
+		subject,
+		assignment,
+		db.GetAllSubmissions(subjectId, id),
+	})
 }

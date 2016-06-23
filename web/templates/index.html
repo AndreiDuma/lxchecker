@@ -5,6 +5,23 @@
 	</head>
 
 	<body>
-		TODO
+		<div><a href="/-/">lxchecker</a></div>
+		<ul>
+			{{range .}}
+			<li>
+				{{$s := .Subject}}
+				<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
+				<ul>
+					{{range $a := .Assignments}}
+					<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
+					{{else}}
+					no assignments
+					{{end}}
+				</ul>
+			</li>
+			{{else}}
+			no subjects
+			{{end}}
+		</ul>
 	</body>
 </html>

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"html/template"
 	"net/http"
 	"regexp"
 
@@ -11,6 +11,8 @@ import (
 
 var (
 	validSubjectId = regexp.MustCompile(`[a-z]+[0-9a-z]+`)
+
+	subjectTmpl = template.Must(template.ParseFiles("templates/subject.html"))
 )
 
 func CreateSubjectHandler(w http.ResponseWriter, r *http.Request) {
@@ -58,9 +60,10 @@ func GetSubjectHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	fmt.Fprintln(w, subject)
-	for _, a := range db.GetAllAssignments(id) {
-		url, _ := router.Get("assignment").URL("subject_id", a.SubjectId, "id", a.Id)
-		fmt.Fprintf(w, "Id: %v, Name: %v, Link: %v\n", a.Id, a.Name, url)
+	// Render template.
+	type D struct {
+		Subject     *db.Subject
+		Assignments []db.Assignment
 	}
+	subjectTmpl.Execute(w, &D{subject, db.GetAllAssignments(subject.Id)})
 }

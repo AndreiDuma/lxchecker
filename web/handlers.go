@@ -17,6 +17,13 @@ func LandingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: feed a template with the subjects.
-	db.GetAllSubjects()
+	type D struct {
+		Subject     *db.Subject
+		Assignments []db.Assignment
+	}
+	data := []D{}
+	for _, s := range db.GetAllSubjects() {
+		data = append(data, D{&s, db.GetAllAssignments(s.Id)})
+	}
+	indexTmpl.Execute(w, data)
 }

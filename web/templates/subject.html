@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Lxchecker</title>
+	</head>
+
+	<body>
+		<div><a href="/-/">lxchecker</a></div>
+
+		{{$s := .Subject}}
+		<div><a href="/-/{{$s.Id}}/">{{$s.Name}}</a></div>
+		<ul>
+			{{range $a := .Assignments}}
+			<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
+			{{else}}
+			no assignments
+			{{end}}
+		</ul>
+	</body>
+</html>

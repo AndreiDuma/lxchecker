@@ -21,7 +21,7 @@ type Assignment struct {
 func GetAssignment(subjectId, id string) (*Assignment, error) {
 	assignment := Assignment{}
 	c := mongo.DB("lxchecker").C("assignments")
-	if err := c.Find(bson.M{"subject_id": subjectId, "assignment_id": id}).One(&assignment); err != nil {
+	if err := c.Find(bson.M{"subject_id": subjectId, "id": id}).One(&assignment); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, ErrNotFound
 		}

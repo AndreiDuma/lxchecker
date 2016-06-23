@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Lxchecker</title>
+	</head>
+
+	<body>
+		<div><a href="/-/">lxchecker</a></div>
+
+		{{$s := .Subject}}
+		{{$a := .Assignment}}
+		<div><a href="/-/{{$s.Id}}/">{{$s.Name}}</a>/<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></div>
+		<ul>
+			{{range $sbm := .Submissions}}
+			<li>
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
+				status={{$sbm.Status}}
+			</li>
+			{{else}}
+			no submissions
+			{{end}}
+		</ul>
+	</body>
+</html>
