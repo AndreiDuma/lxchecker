@@ -5,20 +5,66 @@
 	</head>
 
 	<body>
+		<div style="border: 2px solid red">
+			<!-- TODO: make this shared. -->
+			{{$rd := .RequestData}}
+			<h5>debug info</h5>
+			<p>rd: <em>{{$rd}}</em></p>
+			<p>user: {{$rd.User}}</p>
+		</div>
+
 		<div><a href="/-/">lxchecker</a></div>
 
 		{{$s := .Subject}}
 		{{$a := .Assignment}}
 		<div><a href="/-/{{$s.Id}}/">{{$s.Name}}</a>/<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></div>
 		<ul>
+			<h4>my submissions</h4>
 			{{range $sbm := .Submissions}}
 			<li>
 				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
+				<strong>user={{$sbm.OwnerUsername}}</strong>
 				status={{$sbm.Status}}
+				uploaded_at={{$sbm.Timestamp}}
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">download submission</a>
 			</li>
 			{{else}}
 			no submissions
 			{{end}}
 		</ul>
+		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+		<ul>
+			<h4>all submissions</h4>
+			{{range $sbm := .AllSubmissions}}
+			<li>
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
+				<strong>user={{$sbm.OwnerUsername}}</strong>
+				status={{$sbm.Status}}
+				uploaded_at={{$sbm.Timestamp}}
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">download submission</a>
+			</li>
+			{{else}}
+			no submissions
+			{{end}}
+		</ul>
+		{{end}}
+		<div>
+			<h5>submit solution</h5>
+			<form action="/-/{{$s.Id}}/{{$a.Id}}/create_submission" method="post" enctype="multipart/form-data">
+				<input type="hidden" name="subject_id" value="{{$s.Id}}">
+				<input type="hidden" name="assignment_id" value="{{$a.Id}}">
+
+				<label for="submission">file:</label>
+				<input type="file" id="submission" name="submission">
+
+				<button>submit</button>
+			</form>
+		</div>
+		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+		<div>
+			<h5>configure assignment</h5>
+			TODO
+		</div>
+		{{end}}
 	</body>
 </html>

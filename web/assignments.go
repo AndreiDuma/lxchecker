@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
 	"regexp"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/AndreiDuma/lxchecker/db"
+	"github.com/AndreiDuma/lxchecker/util"
 	"github.com/gorilla/mux"
 )
 
@@ -22,17 +24,9 @@ func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get subject id from request URL.
 	subjectId := vars["subject_id"]
-	if subjectId == "" {
-		http.Error(w, "missing required `subject_id` field", http.StatusBadRequest)
-		return
-	}
 
 	// Get assignment id from request URL.
 	id := r.FormValue("id")
-	if id == "" || !validAssignmentId.MatchString(id) {
-		http.Error(w, "bad or missing required `id` field", http.StatusBadRequest)
-		return
-	}
 
 	// Get other attributes from request params.
 	name := r.FormValue("name")
@@ -77,26 +71,15 @@ func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		panic(err)
 	}
+
+	// Redirect to the newly created assignment.
+	http.Redirect(w, r, fmt.Sprintf("/-/%v/%v/", a.SubjectId, a.Id), http.StatusFound)
 }
 
 func GetAssignmentHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+	rd := util.GetRequestData(r)
 
-	// Get subject id from request URL.
-	subjectId := vars["subject_id"]
-	if subjectId == "" {
-		http.Error(w, "missing required `subject_id` field", http.StatusBadRequest)
-		return
-	}
-
-	// Get assignment id from request URL.
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "missing required `id` field", http.StatusBadRequest)
-		return
-	}
-
-	subject, err := db.GetSubject(subjectId)
+	subject, err := db.GetSubject(rd.SubjectId)
 	if err != nil {
 		if err == db.ErrNotFound {
 			http.Error(w, "no subject matching given `subject_id`", http.StatusNotFound)
@@ -104,7 +87,7 @@ func GetAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		panic(err)
 	}
-	assignment, err := db.GetAssignment(subjectId, id)
+	assignment, err := db.GetAssignment(rd.SubjectId, rd.AssignmentId)
 	if err != nil {
 		if err == db.ErrNotFound {
 			http.Error(w, "no assignment matching given `subject_id` and `id`", http.StatusNotFound)
@@ -115,13 +98,17 @@ func GetAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Render template.
 	type D struct {
-		Subject     *db.Subject
-		Assignment  *db.Assignment
-		Submissions []db.Submission
+		RequestData    *util.RequestData
+		Subject        *db.Subject
+		Assignment     *db.Assignment
+		Submissions    []db.Submission
+		AllSubmissions []db.Submission
 	}
 	assignmentTmpl.Execute(w, &D{
+		rd,
 		subject,
 		assignment,
-		db.GetAllSubmissions(subjectId, id),
+		db.GetAllSubmissionsOfUser(rd.SubjectId, rd.AssignmentId, rd.User.Username),
+		db.GetAllSubmissions(rd.SubjectId, rd.AssignmentId),
 	})
 }

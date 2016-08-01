@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -9,28 +10,19 @@ import (
 	"github.com/AndreiDuma/lxchecker/db"
 	"github.com/AndreiDuma/lxchecker/scheduler"
 	"github.com/AndreiDuma/lxchecker/util"
-	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 	"gopkg.in/mgo.v2"
 )
 
-func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+var (
+	submissionTmpl = template.Must(template.ParseFiles("templates/submission.html"))
+)
 
-	// Get subject & assignment ids from request URL.
-	subjectId := vars["subject_id"]
-	if subjectId == "" {
-		http.Error(w, "missing required `subject_id` field", http.StatusBadRequest)
-		return
-	}
-	assignmentId := vars["assignment_id"]
-	if assignmentId == "" {
-		http.Error(w, "missing required `assignment_id` field", http.StatusBadRequest)
-		return
-	}
+func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
+	rd := util.GetRequestData(r)
 
 	// Get submission file from request.
-	submissionFile, _, err := r.FormFile("submission")
+	submissionFile, submissionFileHeader, err := r.FormFile("submission")
 	if err != nil {
 		http.Error(w, "missing required `submission` field", http.StatusBadRequest)
 		return
@@ -40,7 +32,7 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	assignment, err := db.GetAssignment(subjectId, assignmentId)
+	assignment, err := db.GetAssignment(rd.SubjectId, rd.AssignmentId)
 	if err != nil {
 		if err == db.ErrNotFound {
 			http.Error(w, "no assignment matching given `subject_id` and `assignment_id`", http.StatusBadRequest)
@@ -50,26 +42,25 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add submission to database.
-	s := db.Submission{
-		Id:           db.NewSubmissionId(),
-		AssignmentId: assignmentId,
-		SubjectId:    subjectId,
-		Timestamp:    time.Now(),
-		UploadedFile: submissionBytes,
-		Status:       "pending",
+	s := &db.Submission{
+		Id:               db.NewSubmissionId(),
+		AssignmentId:     rd.AssignmentId,
+		SubjectId:        rd.SubjectId,
+		OwnerUsername:    util.CurrentUser(r).Username,
+		Timestamp:        time.Now(),
+		UploadedFile:     submissionBytes,
+		UploadedFileName: submissionFileHeader.Filename,
+		Status:           "pending",
 	}
 	if err = db.InsertSubmission(s); err != nil {
 		if err == db.ErrNotFound {
 			http.Error(w, "no assignment matching given `subject_id` and `assignment_id`", http.StatusBadRequest)
 			return
 		}
-		if err == db.ErrAlreadyExists {
-			http.Error(w, "submission with given `id` already exists", http.StatusBadRequest)
-			return
-		}
 		panic(err)
 	}
 
+	// Do the actual testing in a separate goroutine.
 	go func() {
 		defer util.LogPanics()
 
@@ -86,50 +77,71 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 			db.UpdateSubmission(s)
 		}
 
-		// Store the logs.
-		if s.Logs, err = ioutil.ReadAll(response.Logs); err != nil {
-			s.Status = "failed"
-			db.UpdateSubmission(s)
-		}
+		// Store logs and update status.
+		s.Logs = response.Logs
 		s.Status = "done"
+
 		db.UpdateSubmission(s)
 	}()
+
+	// Redirect to the newly created submission.
+	http.Redirect(w, r, fmt.Sprintf("/-/%v/%v/%v/", s.SubjectId, s.AssignmentId, s.Id), http.StatusFound)
+
+}
+
+func getSubmissionHelper(w http.ResponseWriter, r *http.Request) *db.Submission {
+	rd := util.GetRequestData(r)
+
+	// Get submission hex id from request URL.
+	if rd.SubmissionId == "" {
+		http.Error(w, "missing required `submission_id` field", http.StatusBadRequest)
+		return nil
+	}
+
+	submission, err := db.GetSubmission(rd.SubjectId, rd.AssignmentId, rd.SubmissionId)
+	if err != nil {
+		if err == mgo.ErrNotFound {
+			http.Error(w, "no submission matching given `subject_id`, `assignment_id` and `submission_id`", http.StatusNotFound)
+			return nil
+		}
+		panic(err)
+	}
+
+	return submission
 }
 
 func GetSubmissionHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-
-	// Get subject id from request URL.
-	subjectId := vars["subject_id"]
-	if subjectId == "" {
-		http.Error(w, "missing required `subject_id` field", http.StatusBadRequest)
+	s := getSubmissionHelper(w, r)
+	if s == nil {
 		return
 	}
 
-	// Get assignment id from request URL.
-	assignmentId := vars["assignment_id"]
-	if assignmentId == "" {
-		http.Error(w, "missing required `assignment_id` field", http.StatusBadRequest)
+	// Render template.
+	type D struct {
+		RequestData *util.RequestData
+
+		/*
+			Subject     *db.Subject
+			Assignment  *db.Assignment
+		*/
+		Submission *db.Submission
+	}
+	submissionTmpl.Execute(w, &D{
+		util.GetRequestData(r),
+		/*
+			subject,
+			assignment,
+		*/
+		s,
+	})
+}
+
+func GetSubmissionUploadHandler(w http.ResponseWriter, r *http.Request) {
+	s := getSubmissionHelper(w, r)
+	if s == nil {
 		return
 	}
-
-	// Get submission hex id from request URL.
-	id := vars["id"]
-	if id == "" {
-		http.Error(w, "missing required `id` field", http.StatusBadRequest)
-		return
-	}
-
-	submission, err := db.GetSubmission(subjectId, assignmentId, id)
-	if err != nil {
-		if err == mgo.ErrNotFound {
-			http.Error(w, "no submission matching given `subject_id`, `assignment_id` and `id`", http.StatusNotFound)
-			return
-		}
-		panic(err)
-	}
-
-	if _, err := fmt.Fprintln(w, submission); err != nil {
-		panic(err)
-	}
+	// TODO: make the downloaded submission have at least the same extension as the uploaded one.
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%v"`, s.UploadedFileName))
+	w.Write(s.UploadedFile)
 }

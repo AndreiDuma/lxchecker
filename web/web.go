@@ -38,16 +38,19 @@ func main() {
 	router.HandleFunc("/signup", SignupTmplHandler).Methods("GET")
 	router.HandleFunc("/signup", SignupHandler).Methods("POST")
 	router.HandleFunc("/logout", LogoutHandler).Methods("GET") // TODO: make this POST.
+	router.HandleFunc("/add_admin", AddAdminHandler).Methods("POST")
 
 	sub := router.PathPrefix("/-/").Subrouter()
-	sub.Handle("/", util.RequireAuth(http.HandlerFunc(IndexHandler))).Methods("GET").Name("index")
-	sub.Handle("/{id}/", util.RequireAuth(http.HandlerFunc(GetSubjectHandler))).Methods("GET").Name("subject")
-	sub.Handle("/{subject_id}/{id}/", util.RequireAuth(http.HandlerFunc(GetAssignmentHandler))).Methods("GET").Name("assignment")
-	sub.Handle("/{subject_id}/{assignment_id}/{id}/", util.RequireAuth(http.HandlerFunc(GetSubmissionHandler))).Methods("GET").Name("submission")
+	sub.Handle("/", util.RequireAuth(http.HandlerFunc(IndexHandler))).Methods("GET")
+	sub.Handle("/{subject_id}/", util.RequireAuth(http.HandlerFunc(GetSubjectHandler))).Methods("GET")
+	sub.Handle("/{subject_id}/{assignment_id}/", util.RequireAuth(http.HandlerFunc(GetAssignmentHandler))).Methods("GET")
+	sub.Handle("/{subject_id}/{assignment_id}/{submission_id}/", util.RequireAuth(http.HandlerFunc(GetSubmissionHandler))).Methods("GET")
+	sub.Handle("/{subject_id}/{assignment_id}/{submission_id}/upload", util.RequireAuth(http.HandlerFunc(GetSubmissionUploadHandler))).Methods("GET")
 
-	sub.Handle("/create_subject/", util.RequireAuth(http.HandlerFunc(CreateSubjectHandler))).Methods("POST")
-	sub.Handle("/{subject_id}/create_assignment/", util.RequireAuth(http.HandlerFunc(CreateAssignmentHandler))).Methods("POST")
-	sub.Handle("/{subject_id}/{assignment_id}/create_submission/", util.RequireAuth(http.HandlerFunc(CreateSubmissionHandler))).Methods("POST")
+	sub.Handle("/create_subject", util.RequireAuth(http.HandlerFunc(CreateSubjectHandler))).Methods("POST")
+	sub.Handle("/{subject_id}/create_assignment", util.RequireAuth(http.HandlerFunc(CreateAssignmentHandler))).Methods("POST")
+	sub.Handle("/{subject_id}/add_teacher", util.RequireAuth(http.HandlerFunc(AddTeacherHandler))).Methods("POST")
+	sub.Handle("/{subject_id}/{assignment_id}/create_submission", util.RequireAuth(http.HandlerFunc(CreateSubmissionHandler))).Methods("POST")
 
 	// TODO: receive this through command-line arguments.
 	host := os.Getenv("LXCHECKER_FRONTEND_HOST")

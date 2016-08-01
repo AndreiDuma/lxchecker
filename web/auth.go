@@ -16,9 +16,17 @@ var (
 // LoginTmplHandler serves the login page.
 func LoginTmplHandler(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.FormValue("continue")
+	signupURL := "/signup"
+	if continueURL != "" {
+		signupURL = "/signup?continue=" + continueURL
+	}
 	loginTmpl.Execute(w, struct {
 		ContinueURL string
-	}{continueURL})
+		SignupURL   string
+	}{
+		continueURL,
+		signupURL,
+	})
 }
 
 // LoginHandler checkes the user's credentials and creates a session.
@@ -97,7 +105,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, signupURL, http.StatusFound)
 	}
 
-	u := db.User{}
+	u := &db.User{}
 
 	// Get username from request.
 	u.Username = r.FormValue("username")

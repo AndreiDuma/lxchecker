@@ -9,7 +9,7 @@ import (
 type User struct {
 	Username string
 	Password string
-	IsAdmin  bool
+	IsAdmin  bool `bson:"is_admin"`
 }
 
 func GetUser(username string) (*User, error) {
@@ -39,11 +39,35 @@ func GetUserAuth(username, password string) (*User, error) {
 	return &u, nil
 }
 
-func InsertUser(u User) error {
+func GetAdmins() []User {
+	admins := []User{}
+	c := mongo.DB("lxchecker").C("users")
+	if err := c.Find(bson.M{
+		"is_admin": true,
+	}).All(&admins); err != nil {
+		panic(err)
+	}
+	return admins
+}
+
+func InsertUser(u *User) error {
 	c := mongo.DB("lxchecker").C("users")
 	if err := c.Insert(u); err != nil {
 		if mgo.IsDup(err) {
 			return ErrAlreadyExists
+		}
+		panic(err)
+	}
+	return nil
+}
+
+func UpdateUser(u *User) error {
+	c := mongo.DB("lxchecker").C("users")
+	if err := c.Update(bson.M{
+		"username": u.Username,
+	}, u); err != nil {
+		if err == mgo.ErrNotFound {
+			return ErrNotFound
 		}
 		panic(err)
 	}

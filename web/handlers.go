@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/AndreiDuma/lxchecker/db"
+	"github.com/AndreiDuma/lxchecker/util"
 )
 
 var (
@@ -17,13 +18,45 @@ func LandingHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	type D struct {
-		Subject     *db.Subject
+	type S struct {
+		Subject     db.Subject
 		Assignments []db.Assignment
 	}
-	data := []D{}
+	type D struct {
+		RequestData *util.RequestData
+
+		Subjects []S
+		Admins   []db.User
+	}
+
+	data := D{
+		RequestData: util.GetRequestData(r),
+		Subjects:    []S{},
+		Admins:      db.GetAdmins(),
+	}
 	for _, s := range db.GetAllSubjects() {
-		data = append(data, D{&s, db.GetAllAssignments(s.Id)})
+		data.Subjects = append(data.Subjects, S{s, db.GetAllAssignments(s.Id)})
 	}
 	indexTmpl.Execute(w, data)
+}
+
+func AddAdminHandler(w http.ResponseWriter, r *http.Request) {
+	// Get user to make admin from request params.
+	username := r.FormValue("username")
+	if username == "" {
+		http.Error(w, "missing required `username` field", http.StatusBadRequest)
+		return
+	}
+	u, err := db.GetUser(username)
+	if err == db.ErrNotFound {
+		http.Error(w, "no user matching given `username`", http.StatusNotFound)
+		return
+	}
+
+	u.IsAdmin = true
+	if db.UpdateUser(u) == db.ErrNotFound {
+		http.Error(w, "no user matching given `username`", http.StatusNotFound)
+		return
+	}
+	http.Redirect(w, r, "/-/", http.StatusFound)
 }

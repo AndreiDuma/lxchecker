@@ -5,6 +5,14 @@
 	</head>
 
 	<body>
+		<div style="border: 2px solid red">
+			<!-- TODO: make this shared. -->
+			{{$rd := .RequestData}}
+			<h5>debug info</h5>
+			<p>rd: <em>{{$rd}}</em></p>
+			<p>user: {{$rd.User}}</p>
+		</div>
+
 		<div><a href="/-/">lxchecker</a></div>
 
 		{{$s := .Subject}}
@@ -16,5 +24,50 @@
 			no assignments
 			{{end}}
 		</ul>
+		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+		<div>
+			<h5>create assignment</h5>
+			<form action="/-/{{$s.Id}}/create_assignment" method="post">
+				<input type="hidden" name="subject_id" value="{{$s.Id}}">
+
+				<label for="id">assignment id:</label>
+				<input type="text" id="id" name="id">
+
+				<label for="name">name:</label>
+				<input type="text" id="name" name="name">
+
+				<label for="image">docker image:</label>
+				<input type="text" id="image" name="image">
+
+				<label for="timeout">timeout:</label>
+				<input type="text" id="timeout" name="timeout">
+
+				<label for="submission_path">submission_path:</label>
+				<input type="text" id="submission_path" name="submission_path">
+
+				<button>create assignment</button>
+			</form>
+		</div>
+		<div>
+			<h5>add teacher</h5>
+
+			<p>
+			{{range .Teachers}}
+			<span>{{.Username}}</span>
+			{{end}}
+			</p>
+
+			<form action="/-/{{$s.Id}}/add_teacher" method="post">
+				<label for="username">username:</label>
+				<input type="text" id="username" name="username">
+
+				<button>add teacher</button>
+			</form>
+		</div>
+		<div>
+			<h5>configure subject</h5>
+			TODO
+		</div>
+		{{end}}
 	</body>
 </html>

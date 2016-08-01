@@ -46,7 +46,7 @@ type SubmitOptions struct {
 
 // SubmitResponse holds data returned from Submit.
 type SubmitResponse struct {
-	Logs     io.Reader
+	Logs     []byte
 	ExitCode int
 }
 
@@ -126,9 +126,21 @@ func (scheduler *Scheduler) Submit(ctx context.Context, options SubmitOptions) (
 		ShowStdout: true,
 		ShowStderr: true,
 	}
-	r.Logs, err = scheduler.cli.ContainerLogs(ctx, container.ID, logsOptions)
+	logsReader, err := scheduler.cli.ContainerLogs(ctx, container.ID, logsOptions)
 	if err != nil {
 		return r, fmt.Errorf("Couldn't get logs from container: %v", err)
 	}
+	if r.Logs, err = processLogs(logsReader); err != nil {
+		return r, fmt.Errorf("Processing logs failed: %v", err)
+	}
 	return r, nil
+}
+
+func processLogs(logsReader io.Reader) ([]byte, error) {
+	logs, err := ioutil.ReadAll(logsReader)
+	if err != nil {
+		return nil, err
+	}
+	logs = bytes.Replace(logs, []byte{1, 0, 0, 0, 0, 0, 0}, []byte("out: "), -1)
+	return bytes.Replace(logs, []byte{2, 0, 0, 0, 0, 0, 0}, []byte("err: "), -1), nil
 }

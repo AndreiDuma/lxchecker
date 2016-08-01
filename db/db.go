@@ -45,6 +45,12 @@ func Init() {
 	}); err != nil {
 		log.Fatalln("failed to ensure an unique index on collection `users`, key `username`")
 	}
+	if err = mongo.DB("lxchecker").C("teachers").EnsureIndex(mgo.Index{
+		Key:    []string{"username", "subject_id"},
+		Unique: true,
+	}); err != nil {
+		log.Fatalln("failed to ensure an unique index on collection `teachers`, keys `username`, `subject_id`")
+	}
 }
 
 func Done() {

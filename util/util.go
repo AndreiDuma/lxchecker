@@ -7,10 +7,39 @@ import (
 	"github.com/AndreiDuma/lxchecker"
 	"github.com/AndreiDuma/lxchecker/db"
 	"github.com/gorilla/context"
+	"github.com/gorilla/mux"
 )
 
-func LogPanics() {
-	log.Printf("panic: %v\n", recover())
+type RequestData struct {
+	SubjectId    string
+	AssignmentId string
+	SubmissionId string
+
+	User          *db.User
+	UserIsTeacher bool
+	UserIsAdmin   bool
+}
+
+func GetRequestData(r *http.Request) *RequestData {
+	data := &RequestData{}
+
+	vars := mux.Vars(r)
+	data.SubjectId = vars["subject_id"]
+	data.AssignmentId = vars["assignment_id"]
+	data.SubmissionId = vars["submission_id"]
+
+	data.User, _ = context.Get(r, "user").(*db.User)
+	if data.User != nil {
+		// For convenience.
+		data.UserIsAdmin = data.User.IsAdmin
+
+		// If within a subject, also determine if the user is teacher for that subject.
+		if data.SubjectId != "" {
+			data.UserIsTeacher = db.IsTeacher(data.User.Username, data.SubjectId)
+		}
+	}
+
+	return data
 }
 
 // CurrentUser returns the currently logged in user or nil if there is none.
@@ -53,4 +82,11 @@ func RequireAuth(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func LogPanics() {
+	r := recover()
+	if r != nil {
+		log.Printf("panic: %v\n", r)
+	}
 }

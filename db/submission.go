@@ -13,12 +13,15 @@ type Submission struct {
 	AssignmentId string `bson:"assignment_id"`
 	SubjectId    string `bson:"subject_id"`
 
-	Status       string // TODO: make this a constant or an enum.
-	Timestamp    time.Time
-	UploadedFile []byte `bson:"uploaded_file",json:"-"`
-	Logs         []byte
-	Score        uint
-	Feedback     string
+	OwnerUsername string `bson:"owner_username"`
+
+	Status           string // TODO: make this a constant or an enum.
+	Timestamp        time.Time
+	UploadedFile     []byte `bson:"uploaded_file",json:"-"`
+	UploadedFileName string `bson:"uploaded_file_name",json:"-"`
+	Logs             []byte
+	Score            uint
+	Feedback         string
 }
 
 func GetSubmission(subjectId, assignmentId, id string) (*Submission, error) {
@@ -49,12 +52,31 @@ func GetAllSubmissions(subjectId, assignmentId string) []Submission {
 	return submissions
 }
 
+func GetAllSubmissionsOfUser(subjectId, assignmentId, ownerUsername string) []Submission {
+	submissions := []Submission{}
+	c := mongo.DB("lxchecker").C("submissions")
+	if err := c.Find(bson.M{
+		"subject_id":     subjectId,
+		"assignment_id":  assignmentId,
+		"owner_username": ownerUsername,
+	}).All(&submissions); err != nil {
+		panic(err)
+	}
+	return submissions
+}
+
 func NewSubmissionId() string {
 	return bson.NewObjectId().Hex()
 }
 
-func InsertSubmission(s Submission) error {
+func InsertSubmission(s *Submission) error {
 	if _, err := GetAssignment(s.SubjectId, s.AssignmentId); err != nil {
+		if err == ErrNotFound {
+			return ErrNotFound
+		}
+		panic(err)
+	}
+	if _, err := GetUser(s.OwnerUsername); err != nil {
 		if err == ErrNotFound {
 			return ErrNotFound
 		}
@@ -70,14 +92,14 @@ func InsertSubmission(s Submission) error {
 	return nil
 }
 
-func UpdateSubmission(s Submission) error {
+func UpdateSubmission(s *Submission) error {
 	c := mongo.DB("lxchecker").C("submissions")
 	if err := c.Update(bson.M{
 		"subject_id":    s.SubjectId,
 		"assignment_id": s.AssignmentId,
 		"id":            s.Id,
 	}, s); err != nil {
-		if mgo.IsDup(err) {
+		if err == mgo.ErrNotFound {
 			return ErrNotFound
 		}
 		panic(err)
