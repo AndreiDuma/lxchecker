@@ -35,7 +35,7 @@
 			{{$active := eq $sbmi 0}}
 			<li>
 				{{if $active}}<span style="color: red; font-weight: bold">active</span>{{end}}
-				{{if $sbm.Graded}}<span style="color: green; font-weight: bold">graded</span>{{end}}
+				{{if $sbm.GradedByTeacher}}<span style="color: green; font-weight: bold">graded</span>{{end}}
 				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
 				<strong>user={{$sbm.OwnerUsername}}</strong>
 				status={{$sbm.Status}}
@@ -51,7 +51,7 @@
 			<h4>active submissions</h4>
 			{{range $sbm := .ActiveSubmissions}}
 			<li>
-				{{if $sbm.Graded}}<span style="color: green; font-weight: bold">graded</span>{{end}}
+				{{if $sbm.GradedByTeacher}}<span style="color: green; font-weight: bold">graded</span>{{end}}
 				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
 				<strong>user={{$sbm.OwnerUsername}}</strong>
 				status={{$sbm.Status}}

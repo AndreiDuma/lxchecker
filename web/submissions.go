@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -87,18 +88,43 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			s.Status = "failed"
 			db.UpdateSubmission(s)
+			return
 		}
 
-		// Store logs and update status.
+		// Store logs and metadata, then extract score.
 		s.Logs = response.Logs
-		s.Status = "done"
+		s.Metadata = getMetadataFromLogs(response.Logs)
+		if s.ScoreByTests, err = strconv.ParseUint(s.Metadata["SCORE"], 10, 64); err != nil {
+			s.Status = "failed"
+			db.UpdateSubmission(s)
+			return
+		}
 
+		s.Status = "done"
 		db.UpdateSubmission(s)
 	}()
 
 	// Redirect to the newly created submission.
 	http.Redirect(w, r, fmt.Sprintf("/-/%v/%v/%v/", s.SubjectId, s.AssignmentId, s.Id), http.StatusFound)
 
+}
+
+func getMetadataFromLogs(logs []byte) map[string]string {
+	metadata := map[string]string{}
+	lines := bytes.Split(logs, []byte("\n"))
+	for _, line := range lines {
+		line = bytes.TrimSpace(line)
+		if !bytes.HasPrefix(line, []byte("@")) {
+			continue
+		}
+		line = bytes.TrimLeft(line, "@")
+		parts := bytes.SplitN(line, []byte(" "), 2)
+		if len(parts) != 2 {
+			continue
+		}
+		metadata[string(parts[0])] = string(parts[1])
+	}
+	return metadata
 }
 
 func getSubmissionHelper(w http.ResponseWriter, r *http.Request) *db.Submission {
@@ -156,7 +182,7 @@ func GradeSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get score from request params.
 	var err error
-	if s.Score, err = strconv.ParseUint(r.FormValue("score"), 10, 64); err != nil {
+	if s.ScoreByTeacher, err = strconv.ParseUint(r.FormValue("score"), 10, 64); err != nil {
 		http.Error(w, "bad or missing required `score` field", http.StatusBadRequest)
 		return
 	}
@@ -169,7 +195,7 @@ func GradeSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 	s.GraderUsername = rd.User.Username
 
 	// Mark as graded.
-	s.Graded = true
+	s.GradedByTeacher = true
 
 	if err := db.UpdateSubmission(s); err != nil {
 		if err == db.ErrNotFound {

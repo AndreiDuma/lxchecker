@@ -20,6 +20,9 @@ type Assignment struct {
 	SoftDeadline time.Time `bson:"soft_deadline"`
 	HardDeadline time.Time `bson:"hard_deadline"`
 	DailyPenalty uint64    `bson:"daily_penalty"`
+
+	MaxScoreByTests   uint64 `bson:"max_score_by_tests"`
+	MaxScoreByTeacher uint64 `bson:"max_score_by_teacher"`
 }
 
 func GetAssignment(subjectId, id string) (*Assignment, error) {

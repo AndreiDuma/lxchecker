@@ -86,6 +86,7 @@ func (scheduler *Scheduler) Submit(ctx context.Context, options SubmitOptions) (
 	// create the container
 	config := &container.Config{
 		Image: options.Image,
+		Tty:   true,
 	}
 	container, err := scheduler.cli.ContainerCreate(ctx, config, nil, nil, "")
 	if err != nil {
@@ -130,17 +131,8 @@ func (scheduler *Scheduler) Submit(ctx context.Context, options SubmitOptions) (
 	if err != nil {
 		return r, fmt.Errorf("Couldn't get logs from container: %v", err)
 	}
-	if r.Logs, err = processLogs(logsReader); err != nil {
-		return r, fmt.Errorf("Processing logs failed: %v", err)
+	if r.Logs, err = ioutil.ReadAll(logsReader); err != nil {
+		return r, fmt.Errorf("Failed reading the logs: %v", err)
 	}
 	return r, nil
-}
-
-func processLogs(logsReader io.Reader) ([]byte, error) {
-	logs, err := ioutil.ReadAll(logsReader)
-	if err != nil {
-		return nil, err
-	}
-	logs = bytes.Replace(logs, []byte{1, 0, 0, 0, 0, 0, 0}, []byte("out: "), -1)
-	return bytes.Replace(logs, []byte{2, 0, 0, 0, 0, 0, 0}, []byte("err: "), -1), nil
 }

@@ -29,16 +29,18 @@
 		<div>
 			<h5>info</h5>
 			<div>status: {{$sbm.Status}}</div>
+			<div>score by tests: {{$sbm.ScoreByTests}}</div>
 			<div>download: <a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">link</a></div>
 			<div>overdue: {{$sbm.Overdue}}</div>
 			<div>penalty: {{$sbm.Penalty}}</div>
-			{{if $sbm.Graded}}
-			<div>score: {{$sbm.Score}}</div>
+			{{if $sbm.GradedByTeacher}}
+			<div>score by teacher: {{$sbm.ScoreByTeacher}}</div>
 			<div>feedback: {{$sbm.Feedback}}</div>
 			<div>graded by: {{$sbm.GraderUsername}}</div>
 			{{else}}
 			<div>graded: no</div>
 			{{end}}
+			<div>metadata: {{$sbm.Metadata}}</div>
 		</div>
 
 		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
@@ -46,10 +48,10 @@
 			<h5>grade submission</h5>
 			<form action="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/grade_submission" method="post">
 				<label for="score">score:</label>
-				<input type="text" id="score" name="score" value="{{if $sbm.Graded}}{{$sbm.Score}}{{end}}">
+				<input type="text" id="score" name="score" value="{{if $sbm.GradedByTeacher}}{{$sbm.ScoreByTeacher}}{{end}}">
 
 				<label for="feedback">feedback:</label>
-				<textarea id="feedback" name="feedback">{{if $sbm.Graded}}{{$sbm.Feedback}}{{end}}</textarea>
+				<textarea id="feedback" name="feedback">{{if $sbm.GradedByTeacher}}{{$sbm.Feedback}}{{end}}</textarea>
 
 				<button>grade submission</button>
 			</form>

@@ -20,11 +20,13 @@ type Submission struct {
 	UploadedFile     []byte `bson:"uploaded_file",json:"-"`
 	UploadedFileName string `bson:"uploaded_file_name",json:"-"`
 	Logs             []byte
+	Metadata         map[string]string
 
-	Graded         bool
-	Score          uint64
-	Feedback       string
-	GraderUsername string `bson:"grader_username"`
+	GradedByTeacher bool   `bson:"graded_by_teacher"`
+	ScoreByTests    uint64 `bson:"score_by_tests"`
+	ScoreByTeacher  uint64 `bson:"score_by_teacher"`
+	Feedback        string
+	GraderUsername  string `bson:"grader_username"`
 
 	Overdue bool
 	Penalty uint64
