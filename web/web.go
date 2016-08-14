@@ -12,8 +12,7 @@ import (
 	"github.com/AndreiDuma/lxchecker/util"
 )
 
-// TODO: use gcfg for configuration?
-// TODO: use flags instead of env variables?
+// TODO: use flags instead of environment variables.
 
 var (
 	sched *scheduler.Scheduler
@@ -34,11 +33,12 @@ func main() {
 	// TODO: wrap router with gorrila/handlers/recovery handler.
 	router.HandleFunc("/", LandingHandler).Methods("GET")
 	router.HandleFunc("/login", LoginTmplHandler).Methods("GET")
-	router.HandleFunc("/login", LoginHandler).Methods("POST")
 	router.HandleFunc("/signup", SignupTmplHandler).Methods("GET")
+
+	router.HandleFunc("/login", LoginHandler).Methods("POST")
 	router.HandleFunc("/signup", SignupHandler).Methods("POST")
 	router.HandleFunc("/logout", LogoutHandler).Methods("GET") // TODO: make this POST.
-	router.HandleFunc("/add_admin", AddAdminHandler).Methods("POST")
+	router.Handle("/add_admin", util.RequireAuth(util.RequireAdmin(http.HandlerFunc(AddAdminHandler)))).Methods("POST")
 
 	sub := router.PathPrefix("/-/").Subrouter()
 	sub.Handle("/", util.RequireAuth(http.HandlerFunc(IndexHandler))).Methods("GET")
@@ -47,12 +47,13 @@ func main() {
 	sub.Handle("/{subject_id}/{assignment_id}/{submission_id}/", util.RequireAuth(http.HandlerFunc(GetSubmissionHandler))).Methods("GET")
 	sub.Handle("/{subject_id}/{assignment_id}/{submission_id}/upload", util.RequireAuth(http.HandlerFunc(GetSubmissionUploadHandler))).Methods("GET")
 
-	sub.Handle("/create_subject", util.RequireAuth(http.HandlerFunc(CreateSubjectHandler))).Methods("POST")
-	sub.Handle("/{subject_id}/create_assignment", util.RequireAuth(http.HandlerFunc(CreateAssignmentHandler))).Methods("POST")
-	sub.Handle("/{subject_id}/add_teacher", util.RequireAuth(http.HandlerFunc(AddTeacherHandler))).Methods("POST")
+	sub.Handle("/create_subject", util.RequireAuth(util.RequireAdmin(http.HandlerFunc(CreateSubjectHandler)))).Methods("POST")
+	sub.Handle("/{subject_id}/create_assignment", util.RequireAuth(util.RequireTeacherOrAdmin(http.HandlerFunc(CreateAssignmentHandler)))).Methods("POST")
+	sub.Handle("/{subject_id}/add_teacher", util.RequireAuth(util.RequireTeacherOrAdmin(http.HandlerFunc(AddTeacherHandler)))).Methods("POST")
 	sub.Handle("/{subject_id}/{assignment_id}/create_submission", util.RequireAuth(http.HandlerFunc(CreateSubmissionHandler))).Methods("POST")
+	sub.Handle("/{subject_id}/{assignment_id}/{submission_id}/grade_submission", util.RequireAuth(util.RequireTeacherOrAdmin(http.HandlerFunc(GradeSubmissionHandler)))).Methods("POST")
 
-	// TODO: receive this through command-line arguments.
+	// TODO: receive this through a command-line argument.
 	host := os.Getenv("LXCHECKER_FRONTEND_HOST")
 	if host == "" {
 		host = ":8080"

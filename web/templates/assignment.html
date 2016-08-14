@@ -13,15 +13,29 @@
 			<p>user: {{$rd.User}}</p>
 		</div>
 
-		<div><a href="/-/">lxchecker</a></div>
-
 		{{$s := .Subject}}
 		{{$a := .Assignment}}
-		<div><a href="/-/{{$s.Id}}/">{{$s.Name}}</a>/<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></div>
+		<div>
+			<a href="/-/">lxchecker</a>
+			/
+			<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
+			/
+			<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a>
+		</div>
+
+		<div>
+			<div>soft_deadline: {{$a.SoftDeadline}}</div>
+			<div>hard_deadline: {{$a.HardDeadline}}</div>
+			<div>daily_penalty: {{$a.DailyPenalty}}</div>
+		</div>
+
 		<ul>
 			<h4>my submissions</h4>
-			{{range $sbm := .Submissions}}
+			{{range $sbmi, $sbm := .Submissions}}
+			{{$active := eq $sbmi 0}}
 			<li>
+				{{if $active}}<span style="color: red; font-weight: bold">active</span>{{end}}
+				{{if $sbm.Graded}}<span style="color: green; font-weight: bold">graded</span>{{end}}
 				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
 				<strong>user={{$sbm.OwnerUsername}}</strong>
 				status={{$sbm.Status}}
@@ -33,6 +47,21 @@
 			{{end}}
 		</ul>
 		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+		<ul>
+			<h4>active submissions</h4>
+			{{range $sbm := .ActiveSubmissions}}
+			<li>
+				{{if $sbm.Graded}}<span style="color: green; font-weight: bold">graded</span>{{end}}
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a>
+				<strong>user={{$sbm.OwnerUsername}}</strong>
+				status={{$sbm.Status}}
+				uploaded_at={{$sbm.Timestamp}}
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">download submission</a>
+			</li>
+			{{else}}
+			no submissions
+			{{end}}
+		</ul>
 		<ul>
 			<h4>all submissions</h4>
 			{{range $sbm := .AllSubmissions}}

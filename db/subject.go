@@ -23,6 +23,14 @@ func GetSubject(id string) (*Subject, error) {
 	return &s, nil
 }
 
+func GetSubjectOrPanic(id string) *Subject {
+	subject, err := GetSubject(id)
+	if err != nil {
+		panic(err)
+	}
+	return subject
+}
+
 func GetAllSubjects() []Subject {
 	subjects := []Subject{}
 	c := mongo.DB("lxchecker").C("subjects")

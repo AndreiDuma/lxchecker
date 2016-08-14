@@ -13,10 +13,13 @@
 			<p>user: {{$rd.User}}</p>
 		</div>
 
-		<div><a href="/-/">lxchecker</a></div>
-
 		{{$s := .Subject}}
-		<div><a href="/-/{{$s.Id}}/">{{$s.Name}}</a></div>
+		<div>
+			<a href="/-/">lxchecker</a>
+			/
+			<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
+		</div>
+
 		<ul>
 			{{range $a := .Assignments}}
 			<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
@@ -30,8 +33,8 @@
 			<form action="/-/{{$s.Id}}/create_assignment" method="post">
 				<input type="hidden" name="subject_id" value="{{$s.Id}}">
 
-				<label for="id">assignment id:</label>
-				<input type="text" id="id" name="id">
+				<label for="assignment_id">assignment id:</label>
+				<input type="text" id="assignment_id" name="assignment_id">
 
 				<label for="name">name:</label>
 				<input type="text" id="name" name="name">
@@ -44,6 +47,15 @@
 
 				<label for="submission_path">submission_path:</label>
 				<input type="text" id="submission_path" name="submission_path">
+
+				<label for="soft_deadline">soft_deadline:</label>
+				<input type="text" id="soft_deadline" name="soft_deadline">
+
+				<label for="hard_deadline">hard_deadline:</label>
+				<input type="text" id="hard_deadline" name="hard_deadline">
+
+				<label for="daily_penalty">daily_penalty:</label>
+				<input type="text" id="daily_penalty" name="daily_penalty">
 
 				<button>create assignment</button>
 			</form>

@@ -14,7 +14,7 @@ var (
 
 func LandingHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: add a proper index page instead of redirecting to login.
-	http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, "/-/", http.StatusFound)
 }
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {

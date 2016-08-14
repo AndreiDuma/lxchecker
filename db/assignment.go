@@ -16,6 +16,10 @@ type Assignment struct {
 	Image          string
 	Timeout        time.Duration
 	SubmissionPath string `bson:"submission_path"`
+
+	SoftDeadline time.Time `bson:"soft_deadline"`
+	HardDeadline time.Time `bson:"hard_deadline"`
+	DailyPenalty uint64    `bson:"daily_penalty"`
 }
 
 func GetAssignment(subjectId, id string) (*Assignment, error) {
@@ -28,6 +32,14 @@ func GetAssignment(subjectId, id string) (*Assignment, error) {
 		panic(err)
 	}
 	return &assignment, nil
+}
+
+func GetAssignmentOrPanic(subjectId, id string) *Assignment {
+	assignment, err := GetAssignment(subjectId, id)
+	if err != nil {
+		panic(err)
+	}
+	return assignment
 }
 
 func GetAllAssignments(subjectId string) []Assignment {

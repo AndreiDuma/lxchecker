@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -15,31 +16,32 @@ type RequestData struct {
 	AssignmentId string
 	SubmissionId string
 
-	User          *db.User
-	UserIsTeacher bool
-	UserIsAdmin   bool
+	User           *db.User
+	UserIsLoggedIn bool
+	UserIsTeacher  bool
+	UserIsAdmin    bool
 }
 
 func GetRequestData(r *http.Request) *RequestData {
-	data := &RequestData{}
+	rd := &RequestData{}
 
 	vars := mux.Vars(r)
-	data.SubjectId = vars["subject_id"]
-	data.AssignmentId = vars["assignment_id"]
-	data.SubmissionId = vars["submission_id"]
+	rd.SubjectId = vars["subject_id"]
+	rd.AssignmentId = vars["assignment_id"]
+	rd.SubmissionId = vars["submission_id"]
 
-	data.User, _ = context.Get(r, "user").(*db.User)
-	if data.User != nil {
+	rd.User, _ = context.Get(r, "user").(*db.User)
+	if rd.User != nil {
 		// For convenience.
-		data.UserIsAdmin = data.User.IsAdmin
+		rd.UserIsLoggedIn = true
+		rd.UserIsAdmin = rd.User.IsAdmin
 
 		// If within a subject, also determine if the user is teacher for that subject.
-		if data.SubjectId != "" {
-			data.UserIsTeacher = db.IsTeacher(data.User.Username, data.SubjectId)
+		if rd.SubjectId != "" {
+			rd.UserIsTeacher = db.IsTeacher(rd.User.Username, rd.SubjectId)
 		}
 	}
-
-	return data
+	return rd
 }
 
 // CurrentUser returns the currently logged in user or nil if there is none.
@@ -79,6 +81,36 @@ func RequireAuth(next http.Handler) http.Handler {
 			panic(err)
 		}
 		context.Set(r, "user", user)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RequireAdmin middleware makes sure the current user is an admin.
+func RequireAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rd := GetRequestData(r)
+
+		if !rd.UserIsAdmin {
+			// TODO: call a proper handler or redirect.
+			fmt.Fprintf(w, "permission denied: need to be admin")
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// RequireTeacherOrAdmin middleware makes sure the current user is a teacher for the requested subject or an admin.
+func RequireTeacherOrAdmin(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rd := GetRequestData(r)
+
+		if !rd.UserIsTeacher && !rd.UserIsAdmin {
+			// TODO: call a proper handler or redirect.
+			fmt.Fprintf(w, "permission denied: need to be teacher or admin")
+			return
+		}
 
 		next.ServeHTTP(w, r)
 	})

@@ -20,8 +20,14 @@ type Submission struct {
 	UploadedFile     []byte `bson:"uploaded_file",json:"-"`
 	UploadedFileName string `bson:"uploaded_file_name",json:"-"`
 	Logs             []byte
-	Score            uint
-	Feedback         string
+
+	Graded         bool
+	Score          uint64
+	Feedback       string
+	GraderUsername string `bson:"grader_username"`
+
+	Overdue bool
+	Penalty uint64
 }
 
 func GetSubmission(subjectId, assignmentId, id string) (*Submission, error) {
@@ -40,27 +46,77 @@ func GetSubmission(subjectId, assignmentId, id string) (*Submission, error) {
 	return &submission, nil
 }
 
+func GetSubmissionOrPanic(subjectId, assignmentId, id string) *Submission {
+	submission, err := GetSubmission(subjectId, assignmentId, id)
+	if err != nil {
+		panic(err)
+	}
+	return submission
+}
+
 func GetAllSubmissions(subjectId, assignmentId string) []Submission {
 	submissions := []Submission{}
 	c := mongo.DB("lxchecker").C("submissions")
 	if err := c.Find(bson.M{
 		"subject_id":    subjectId,
 		"assignment_id": assignmentId,
-	}).All(&submissions); err != nil {
+	}).Sort("-timestamp").All(&submissions); err != nil {
 		panic(err)
 	}
 	return submissions
 }
 
-func GetAllSubmissionsOfUser(subjectId, assignmentId, ownerUsername string) []Submission {
+func GetSubmissionsOfUser(subjectId, assignmentId, ownerUsername string) []Submission {
 	submissions := []Submission{}
 	c := mongo.DB("lxchecker").C("submissions")
 	if err := c.Find(bson.M{
 		"subject_id":     subjectId,
 		"assignment_id":  assignmentId,
 		"owner_username": ownerUsername,
-	}).All(&submissions); err != nil {
+	}).Sort("-timestamp").All(&submissions); err != nil {
 		panic(err)
+	}
+	return submissions
+}
+
+func GetActiveSubmissions(subjectId, assignmentId string) []Submission {
+	type ActiveSubmission struct {
+		OwnerUsername string `bson:_id`
+		Submission    Submission
+	}
+	submissionsByUser := []ActiveSubmission{}
+
+	c := mongo.DB("lxchecker").C("submissions")
+	if err := c.Pipe([]bson.M{
+		{
+			"$match": bson.M{
+				"subject_id":    subjectId,
+				"assignment_id": assignmentId,
+			},
+		},
+		{
+			"$sort": bson.M{
+				"timestamp": -1,
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id":        "$owner_username",
+				"submission": bson.M{"$first": "$$ROOT"},
+			},
+		},
+		{
+			"$sort": bson.M{
+				"submission.timestamp": -1,
+			},
+		},
+	}).All(&submissionsByUser); err != nil {
+		panic(err)
+	}
+
+	submissions := []Submission{}
+	for _, s := range submissionsByUser {
+		submissions = append(submissions, s.Submission)
 	}
 	return submissions
 }

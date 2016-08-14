@@ -83,7 +83,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := config.CookieStore.Get(r, "auth")
 	session.Options.MaxAge = -1
 	session.Save(r, w)
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 // SignupTmplHandler serves the sign up page.
@@ -126,6 +126,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	if err := db.InsertUser(u); err != nil {
 		if err == db.ErrAlreadyExists {
 			retrySignup()
+			return
 		}
 		panic(err)
 	}

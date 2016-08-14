@@ -13,15 +13,51 @@
 			<p>user: {{$rd.User}}</p>
 		</div>
 
-		<div><a href="/-/">lxchecker</a></div>
-
-		{{/*
 		{{$s := .Subject}}
 		{{$a := .Assignment}}
-		<div><a href="/-/{{$s.Id}}/">{{$s.Name}}</a>/<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></div>
-		*/}}
+		{{$sbm := .Submission}}
+		<div>
+			<a href="/-/">lxchecker</a>
+			/
+			<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
+			/
+			<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a>
+			/
+			<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}">{{$sbm.Id}}</a>
+		</div>
 
-		<pre>{{printf "%s" .Submission.Logs}}</pre>
+		<div>
+			<h5>info</h5>
+			<div>status: {{$sbm.Status}}</div>
+			<div>download: <a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">link</a></div>
+			<div>overdue: {{$sbm.Overdue}}</div>
+			<div>penalty: {{$sbm.Penalty}}</div>
+			{{if $sbm.Graded}}
+			<div>score: {{$sbm.Score}}</div>
+			<div>feedback: {{$sbm.Feedback}}</div>
+			<div>graded by: {{$sbm.GraderUsername}}</div>
+			{{else}}
+			<div>graded: no</div>
+			{{end}}
+		</div>
+
+		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+		<div>
+			<h5>grade submission</h5>
+			<form action="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/grade_submission" method="post">
+				<label for="score">score:</label>
+				<input type="text" id="score" name="score" value="{{if $sbm.Graded}}{{$sbm.Score}}{{end}}">
+
+				<label for="feedback">feedback:</label>
+				<textarea id="feedback" name="feedback">{{if $sbm.Graded}}{{$sbm.Feedback}}{{end}}</textarea>
+
+				<button>grade submission</button>
+			</form>
+		</div>
+		{{end}}
+
+		<h5>logs</h5>
+		<pre>{{printf "%s" $sbm.Logs}}</pre>
 
 	</body>
 </html>
