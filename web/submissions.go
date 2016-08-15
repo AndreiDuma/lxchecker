@@ -19,6 +19,26 @@ var (
 	submissionTmpl = template.Must(template.ParseFiles("templates/submission.html"))
 )
 
+func IsSubmissionOverdue(s *db.Submission, a *db.Assignment) bool {
+	return time.Now().After(a.HardDeadline)
+}
+
+func GetSubmissionPenalty(s *db.Submission, a *db.Assignment) int {
+	now := time.Now()
+	if now.After(a.SoftDeadline) && now.Before(a.HardDeadline) {
+		daysLate := int(time.Now().Sub(a.SoftDeadline).Hours()/24) + 1
+		return daysLate * a.DailyPenalty
+	}
+	return 0
+}
+
+func GetSubmissionOverallGrade(s *db.Submission, a *db.Assignment) int {
+	if IsSubmissionOverdue(s, a) {
+		return 0
+	}
+	return s.ScoreByTests + s.ScoreByTeacher - GetSubmissionPenalty(s, a)
+}
+
 func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 	rd := util.GetRequestData(r)
 
@@ -42,16 +62,6 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	penalty := uint64(0)
-	overdue := false
-	now := time.Now()
-	if now.After(assignment.SoftDeadline) && now.Before(assignment.HardDeadline) {
-		daysLate := uint64(time.Now().Sub(assignment.SoftDeadline).Hours()/24) + 1
-		penalty = daysLate * assignment.DailyPenalty
-	} else if now.After(assignment.HardDeadline) {
-		overdue = true
-	}
-
 	// Add submission to database.
 	s := &db.Submission{
 		Id:               db.NewSubmissionId(),
@@ -62,8 +72,6 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 		UploadedFile:     submissionBytes,
 		UploadedFileName: submissionFileHeader.Filename,
 		Status:           "pending",
-		Penalty:          penalty,
-		Overdue:          overdue,
 	}
 	if err = db.InsertSubmission(s); err != nil {
 		if err == db.ErrNotFound {
@@ -94,7 +102,7 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 		// Store logs and metadata, then extract score.
 		s.Logs = response.Logs
 		s.Metadata = getMetadataFromLogs(response.Logs)
-		if s.ScoreByTests, err = strconv.ParseUint(s.Metadata["SCORE"], 10, 64); err != nil {
+		if s.ScoreByTests, err = strconv.Atoi(s.Metadata["SCORE"]); err != nil {
 			s.Status = "failed"
 			db.UpdateSubmission(s)
 			return
@@ -147,20 +155,27 @@ func GetSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 	if s == nil {
 		return
 	}
+	a := db.GetAssignmentOrPanic(s.SubjectId, s.AssignmentId)
 
 	// Render template.
 	type D struct {
 		RequestData *util.RequestData
 
-		Subject    *db.Subject
-		Assignment *db.Assignment
-		Submission *db.Submission
+		Subject                *db.Subject
+		Assignment             *db.Assignment
+		Submission             *db.Submission
+		SubmissionIsOverdue    bool
+		SubmissionPenalty      int
+		SubmissionOverallGrade int
 	}
 	submissionTmpl.Execute(w, &D{
 		util.GetRequestData(r),
 		db.GetSubjectOrPanic(s.SubjectId),
-		db.GetAssignmentOrPanic(s.SubjectId, s.AssignmentId),
+		a,
 		s,
+		IsSubmissionOverdue(s, a),
+		GetSubmissionPenalty(s, a),
+		GetSubmissionOverallGrade(s, a),
 	})
 }
 
@@ -182,7 +197,7 @@ func GradeSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get score from request params.
 	var err error
-	if s.ScoreByTeacher, err = strconv.ParseUint(r.FormValue("score"), 10, 64); err != nil {
+	if s.ScoreByTeacher, err = strconv.Atoi(r.FormValue("score")); err != nil {
 		http.Error(w, "bad or missing required `score` field", http.StatusBadRequest)
 		return
 	}

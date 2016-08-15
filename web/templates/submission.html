@@ -28,19 +28,25 @@
 
 		<div>
 			<h5>info</h5>
-			<div>status: {{$sbm.Status}}</div>
-			<div>score by tests: {{$sbm.ScoreByTests}}</div>
 			<div>download: <a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">link</a></div>
-			<div>overdue: {{$sbm.Overdue}}</div>
-			<div>penalty: {{$sbm.Penalty}}</div>
+			<div>status: {{$sbm.Status}}</div>
+
+			{{if eq $sbm.Status "done"}}
+			<div>metadata: {{$sbm.Metadata}}</div>
+			<div>score by tests: {{$sbm.ScoreByTests}}</div>
+			{{end}}
+
+			<div>overdue: {{.SubmissionIsOverdue}}</div>
+			{{if gt .SubmissionPenalty 0}}<div>penalty: {{.SubmissionPenalty}}</div>{{end}}
+
 			{{if $sbm.GradedByTeacher}}
 			<div>score by teacher: {{$sbm.ScoreByTeacher}}</div>
 			<div>feedback: {{$sbm.Feedback}}</div>
 			<div>graded by: {{$sbm.GraderUsername}}</div>
+			<div><strong>overall grade: {{.SubmissionOverallGrade}}</strong></div>
 			{{else}}
 			<div>graded: no</div>
 			{{end}}
-			<div>metadata: {{$sbm.Metadata}}</div>
 		</div>
 
 		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}

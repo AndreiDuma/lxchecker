@@ -68,7 +68,7 @@ func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	hardDeadline = getEndOfDay(hardDeadline)
-	dailyPenalty, err := strconv.ParseUint(r.FormValue("daily_penalty"), 10, 64)
+	dailyPenalty, err := strconv.Atoi(r.FormValue("daily_penalty"))
 	if err != nil {
 		http.Error(w, "bad or missing required `daily_penalty` field", http.StatusBadRequest)
 		return

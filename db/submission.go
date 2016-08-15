@@ -22,14 +22,12 @@ type Submission struct {
 	Logs             []byte
 	Metadata         map[string]string
 
-	GradedByTeacher bool   `bson:"graded_by_teacher"`
-	ScoreByTests    uint64 `bson:"score_by_tests"`
-	ScoreByTeacher  uint64 `bson:"score_by_teacher"`
-	Feedback        string
-	GraderUsername  string `bson:"grader_username"`
+	ScoreByTests int `bson:"score_by_tests"`
 
-	Overdue bool
-	Penalty uint64
+	GradedByTeacher bool   `bson:"graded_by_teacher"`
+	GraderUsername  string `bson:"grader_username"`
+	ScoreByTeacher  int    `bson:"score_by_teacher"`
+	Feedback        string
 }
 
 func GetSubmission(subjectId, assignmentId, id string) (*Submission, error) {
