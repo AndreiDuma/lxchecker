@@ -1,68 +1,56 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Lxchecker</title>
-	</head>
+{{define "title"}}lxchecker{{end}}
 
-	<body>
-		<div style="border: 2px solid red">
-			<!-- TODO: make this shared. -->
-			{{$rd := .RequestData}}
-			<h5>debug info</h5>
-			<p>rd: <em>{{$rd}}</em></p>
-			<p>user: {{$rd.User}}</p>
-		</div>
+{{define "contents"}}
+{{$rd := .RequestData}}
+<ol class="breadcrumb">
+	<li><a href="/-/">lxchecker</a></li>
+</ol>
 
-		<div>
-			<a href="/-/">lxchecker</a>
-		</div>
-
+<ul>
+	{{range .Subjects}}
+	<li>
+		{{$s := .Subject}}
+		<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
 		<ul>
-			{{range .Subjects}}
-			<li>
-				{{$s := .Subject}}
-				<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
-				<ul>
-					{{range $a := .Assignments}}
-					<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
-					{{else}}
-					no assignments
-					{{end}}
-				</ul>
-			</li>
+			{{range $a := .Assignments}}
+			<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
 			{{else}}
-			no subjects
+			no assignments
 			{{end}}
 		</ul>
-		{{if $rd.UserIsAdmin}}
-		<div>
-			<h5>create subject</h5>
-			<form action="/-/create_subject" method="post">
-				<label for="id">subject id:</label>
-				<input type="text" id="id" name="id">
+	</li>
+	{{else}}
+	no subjects
+	{{end}}
+</ul>
+{{if $rd.UserIsAdmin}}
+<div>
+	<h5>create subject</h5>
+	<form action="/-/create_subject" method="post">
+		<label for="id">subject id:</label>
+		<input type="text" id="id" name="id">
 
-				<label for="name">name:</label>
-				<input type="text" id="name" name="name">
+		<label for="name">name:</label>
+		<input type="text" id="name" name="name">
 
-				<button>create subject</button>
-			</form>
-		</div>
-		<div>
-			<h5>add admin</h5>
+		<button>create subject</button>
+	</form>
+</div>
+<div>
+	<h5>add admin</h5>
 
-			<p>
-			{{range .Admins}}
-			<span>{{.Username}}</span>
-			{{end}}
-			</p>
+	<p>
+	{{range .Admins}}
+	<span>{{.Username}}</span>
+	{{end}}
+	</p>
 
-			<form action="/add_admin" method="post">
-				<label for="username">username:</label>
-				<input type="text" id="username" name="username">
+	<form action="/add_admin" method="post">
+		<label for="username">username:</label>
+		<input type="text" id="username" name="username">
 
-				<button>add admin</button>
-			</form>
-		</div>
-		{{end}}
-	</body>
-</html>
+		<button>add admin</button>
+	</form>
+</div>
+{{end}}
+{{end}}

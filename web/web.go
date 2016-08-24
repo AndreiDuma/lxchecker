@@ -30,6 +30,7 @@ func main() {
 	defer db.Done()
 
 	// Setup handlers.
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
 	// TODO: wrap router with gorrila/handlers/recovery handler.
 	router.HandleFunc("/", LandingHandler).Methods("GET")
 	router.HandleFunc("/login", LoginTmplHandler).Methods("GET")

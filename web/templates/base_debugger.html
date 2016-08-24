@@ -1,0 +1,10 @@
+{{define "debugger"}}
+<div style="border: 2px solid red">
+	{{if .RequestData}}
+	{{$rd := .RequestData}}
+	<h5>debug info</h5>
+	<p>rd: <em>{{$rd}}</em></p>
+	<p>user: {{$rd.User}}</p>
+	{{end}}
+</div>
+{{end}}

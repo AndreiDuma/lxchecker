@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	submissionTmpl = template.Must(template.ParseFiles("templates/submission.html"))
+	submissionTmpl = template.Must(template.ParseFiles("templates/base.html", "templates/submission.html"))
 )
 
 func IsSubmissionOverdue(s *db.Submission, a *db.Assignment) bool {
@@ -90,7 +90,7 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 			Image:          assignment.Image,
 			Submission:     submissionBytes,
 			SubmissionPath: assignment.SubmissionPath,
-			Timeout:        assignment.Timeout * time.Second,
+			Timeout:        assignment.Timeout,
 		}
 		response, err := sched.Submit(context.Background(), options)
 		if err != nil {
@@ -102,7 +102,7 @@ func CreateSubmissionHandler(w http.ResponseWriter, r *http.Request) {
 		// Store logs and metadata, then extract score.
 		s.Logs = response.Logs
 		s.Metadata = getMetadataFromLogs(response.Logs)
-		if s.ScoreByTests, err = strconv.Atoi(s.Metadata["SCORE"]); err != nil {
+		if s.ScoreByTests, err = strconv.Atoi(s.Metadata["score"]); err != nil {
 			s.Status = "failed"
 			db.UpdateSubmission(s)
 			return

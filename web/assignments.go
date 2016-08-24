@@ -16,7 +16,7 @@ var (
 	validAssignmentId  = regexp.MustCompile(`[a-z]+[0-9a-z]+`)
 	deadlineDateFormat = "02.01.2006"
 
-	assignmentTmpl = template.Must(template.ParseFiles("templates/assignment.html"))
+	assignmentTmpl = template.Must(template.ParseFiles("templates/base.html", "templates/assignment.html"))
 )
 
 func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +43,7 @@ func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad or missing required `timeout` field", http.StatusBadRequest)
 		return
 	}
-	timeout := time.Duration(timeoutInt)
+	timeout := time.Duration(time.Duration(timeoutInt) * time.Second)
 
 	submissionPath := r.FormValue("submission_path")
 	if submissionPath == "" {
@@ -55,14 +55,15 @@ func CreateAssignmentHandler(w http.ResponseWriter, r *http.Request) {
 	getEndOfDay := func(t time.Time) time.Time {
 		return t.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 	}
+	location, _ := time.LoadLocation("Europe/Bucharest")
 
-	softDeadline, err := time.Parse(deadlineDateFormat, r.FormValue("soft_deadline"))
+	softDeadline, err := time.ParseInLocation(deadlineDateFormat, r.FormValue("soft_deadline"), location)
 	if err != nil {
 		http.Error(w, "bad or missing required `soft_deadline` field", http.StatusBadRequest)
 		return
 	}
 	softDeadline = getEndOfDay(softDeadline)
-	hardDeadline, err := time.Parse(deadlineDateFormat, r.FormValue("hard_deadline"))
+	hardDeadline, err := time.ParseInLocation(deadlineDateFormat, r.FormValue("hard_deadline"), location)
 	if err != nil {
 		http.Error(w, "bad or missing required `hard_deadline` field", http.StatusBadRequest)
 		return

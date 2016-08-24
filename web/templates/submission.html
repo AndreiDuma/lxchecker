@@ -1,71 +1,127 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Lxchecker</title>
-	</head>
+{{define "title"}}lxchecker :: {{.Subject.Id}} :: {{.Assignment.Id}} :: {{.Submission.Id}}{{end}}
 
-	<body>
-		<div style="border: 2px solid red">
-			<!-- TODO: make this shared. -->
-			{{$rd := .RequestData}}
-			<h5>debug info</h5>
-			<p>rd: <em>{{$rd}}</em></p>
-			<p>user: {{$rd.User}}</p>
-		</div>
+{{define "contents"}}
+{{$rd := .RequestData}}
+{{$s := .Subject}}
+{{$a := .Assignment}}
+{{$sbm := .Submission}}
 
-		{{$s := .Subject}}
-		{{$a := .Assignment}}
-		{{$sbm := .Submission}}
+<ol class="breadcrumb">
+	<li><a href="/-/">lxchecker</a></li>
+	<li><a href="/-/{{$s.Id}}/">{{$s.Name}}</a></li>
+	<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
+	<li><a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}">{{$sbm.Id}}</a></li>
+</ol>
+
+<div class="panel panel-primary">
+	<div class="panel-heading">submission info</div>
+
+	<table class="table">
+		<tr>
+			<td class="col-md-4">status</td>
+			<td>
+				{{if eq $sbm.Status "done"}}<span class="label label-success">done</span>{{end}}
+				{{if eq $sbm.Status "pending"}}<span class="label label-warning">pending</span>{{end}}
+				{{if eq $sbm.Status "failed"}}<span class="label label-danger">failed</span>{{end}}
+
+				{{if .SubmissionIsOverdue}}<span class="label label-danger">overdue</span>{{end}}
+				{{if gt .SubmissionPenalty 0}}<span class="label label-danger">penalty: {{.SubmissionPenalty}}</span>{{end}}
+				{{if and (not .SubmissionIsOverdue) (eq .SubmissionPenalty 0)}}<span class="label label-success">on time</span>{{end}}
+
+				{{if eq $sbm.Status "done"}}<span class="label label-primary">score by tests: {{$sbm.ScoreByTests}}</span>{{end}}
+			</td>
+		</tr>
+		<tr>
+			<td class="col-md-4">execution metadata</td>
+			<td>
+				{{if or (eq $sbm.Status "done") (eq $sbm.Status "failed")}}
+				{{range $key, $value := $sbm.Metadata}}
+				<span class="label label-default">{{$key}}: {{$value}}</span>
+				{{else}}
+				<span class="text-muted">none</span>
+				{{end}}
+				{{else}}
+				<span class="text-muted">not yet available</span>
+				{{end}}
+			</td>
+		</tr>
+		<tr>
+			<td class="col-md-4">download submission</td>
+			<td>
+				<!--<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload"><span class="label label-primary">link</span></a>-->
+				<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">link</a>
+			</td>
+		</tr>
+		<tr>
+			<td class="col-md-4">grading status</td>
+			<td>
+				{{if $sbm.GradedByTeacher}}
+				<span class="label label-primary">score by teacher: {{$sbm.ScoreByTeacher}}</span>
+				<span class="label label-default">graded by: <em>{{$sbm.GraderUsername}}</em></span>
+				{{else}}
+				<span class="label label-warning">not graded</span>
+				{{end}}
+			</td>
+		</tr>
+		<tr>
+			<td class="col-md-4">feedback</td>
+			<td>
+				{{if $sbm.GradedByTeacher}}
+				<span>{{$sbm.Feedback}}</span>
+				{{else}}
+				<span class="text-muted">not yet available</span>
+				{{end}}
+			</td>
+		</tr>
+	</table>
+
+	<div class="panel-body">
 		<div>
-			<a href="/-/">lxchecker</a>
-			/
-			<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
-			/
-			<a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a>
-			/
-			<a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}">{{$sbm.Id}}</a>
-		</div>
-
-		<div>
-			<h5>info</h5>
-			<div>download: <a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/upload">link</a></div>
-			<div>status: {{$sbm.Status}}</div>
-
-			{{if eq $sbm.Status "done"}}
-			<div>metadata: {{$sbm.Metadata}}</div>
-			<div>score by tests: {{$sbm.ScoreByTests}}</div>
-			{{end}}
-
-			<div>overdue: {{.SubmissionIsOverdue}}</div>
-			{{if gt .SubmissionPenalty 0}}<div>penalty: {{.SubmissionPenalty}}</div>{{end}}
-
 			{{if $sbm.GradedByTeacher}}
-			<div>score by teacher: {{$sbm.ScoreByTeacher}}</div>
-			<div>feedback: {{$sbm.Feedback}}</div>
-			<div>graded by: {{$sbm.GraderUsername}}</div>
-			<div><strong>overall grade: {{.SubmissionOverallGrade}}</strong></div>
+			<span class="label label-primary">score by tests: {{$sbm.ScoreByTests}}</span>
+			+ <span class="label label-primary">score by teacher: {{$sbm.ScoreByTeacher}}</span>
+			{{if gt .SubmissionPenalty 0}}- <span class="label label-danger">penalty: {{.SubmissionPenalty}}</span>{{end}}
+			= <span class="label label-default">overall grade: {{.SubmissionOverallGrade}}</span>
 			{{else}}
-			<div>graded: no</div>
+			<span class="text-muted">overall grade not available</span>
 			{{end}}
 		</div>
+	</div>
+</div>
 
-		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
-		<div>
-			<h5>grade submission</h5>
-			<form action="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/grade_submission" method="post">
-				<label for="score">score:</label>
-				<input type="text" id="score" name="score" value="{{if $sbm.GradedByTeacher}}{{$sbm.ScoreByTeacher}}{{end}}">
-
-				<label for="feedback">feedback:</label>
-				<textarea id="feedback" name="feedback">{{if $sbm.GradedByTeacher}}{{$sbm.Feedback}}{{end}}</textarea>
-
-				<button>grade submission</button>
-			</form>
-		</div>
-		{{end}}
-
-		<h5>logs</h5>
+<div class="panel panel-default">
+	<div class="panel-heading">execution logs</div>
+	<div class="panel-body">
+		{{if or (eq $sbm.Status "done") (eq $sbm.Status "failed")}}
+		<!--
 		<pre>{{printf "%s" $sbm.Logs}}</pre>
+		-->
+		<div style="white-space: pre-wrap; font-family: monospace">{{printf "%s" $sbm.Logs}}</div>
+		{{else}}
+		<span class="text-muted">not yet available</span>
+		{{end}}
+	</div>
+</div>
 
-	</body>
-</html>
+{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+<div class="panel panel-danger">
+	<div class="panel-heading">grade submission</div>
+	<div class="panel-body">
+		<form action="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/grade_submission" method="post">
+			<div class="form-group">
+				<label for="score">score:</label>
+				<input type="text" id="score" class="form-control" name="score" value="{{if $sbm.GradedByTeacher}}{{$sbm.ScoreByTeacher}}{{end}}">
+			</div>
+
+			<div class="form-group">
+				<label for="feedback">feedback:</label>
+				<textarea id="feedback" class="form-control" name="feedback">{{if $sbm.GradedByTeacher}}{{$sbm.Feedback}}{{end}}</textarea>
+			</div>
+
+			<button type="submit" class="btn btn-danger">grade submission</button>
+		</form>
+	</div>
+</div>
+{{end}}
+
+{{end}}

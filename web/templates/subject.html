@@ -1,85 +1,105 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Lxchecker</title>
-	</head>
+{{define "title"}}lxchecker :: {{.Subject.Id}}{{end}}
 
-	<body>
-		<div style="border: 2px solid red">
-			<!-- TODO: make this shared. -->
-			{{$rd := .RequestData}}
-			<h5>debug info</h5>
-			<p>rd: <em>{{$rd}}</em></p>
-			<p>user: {{$rd.User}}</p>
-		</div>
+{{define "contents"}}
+{{$rd := .RequestData}}
+{{$s := .Subject}}
 
-		{{$s := .Subject}}
-		<div>
-			<a href="/-/">lxchecker</a>
-			/
-			<a href="/-/{{$s.Id}}/">{{$s.Name}}</a>
-		</div>
+<ol class="breadcrumb">
+	<li><a href="/-/">lxchecker</a></li>
+	<li><a href="/-/{{$s.Id}}/">{{$s.Name}}</a></li>
+</ol>
 
-		<ul>
-			{{range $a := .Assignments}}
-			<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
-			{{else}}
-			no assignments
-			{{end}}
-		</ul>
-		{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
-		<div>
-			<h5>create assignment</h5>
-			<form action="/-/{{$s.Id}}/create_assignment" method="post">
-				<input type="hidden" name="subject_id" value="{{$s.Id}}">
+<ul>
+	{{range $a := .Assignments}}
+	<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
+	{{else}}
+	no assignments
+	{{end}}
+</ul>
 
-				<label for="assignment_id">assignment id:</label>
-				<input type="text" id="assignment_id" name="assignment_id">
+{{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
+<div class="panel panel-danger">
+	<div class="panel-heading">create assignment</div>
+	<div class="panel-body">
+		<form action="/-/{{$s.Id}}/create_assignment" method="post">
+			<input type="hidden" name="subject_id" value="{{$s.Id}}">
 
-				<label for="name">name:</label>
-				<input type="text" id="name" name="name">
+			<div class="form-group">
+				<div class="row">
+					<div class="col-xs-2">
+						<label for="assignment_id">assignment id:</label>
+						<input type="text" id="assignment_id" class="form-control" placeholder="tema3" name="assignment_id">
+					</div>
 
-				<label for="image">docker image:</label>
-				<input type="text" id="image" name="image">
+					<div class="col-xs-5">
+						<label for="name">name:</label>
+						<input type="text" id="name" class="form-control" placeholder="Tema 3 (Conway's Game of Life)" name="name">
+					</div>
 
-				<label for="timeout">timeout:</label>
-				<input type="text" id="timeout" name="timeout">
+					<div class="col-xs-4">
+						<label for="image">docker image:</label>
+						<input type="text" id="image" class="form-control" placeholder="lxchecker/pc_tema3" name="image">
+					</div>
+				</div>
+			</div>
 
-				<label for="submission_path">submission_path:</label>
-				<input type="text" id="submission_path" name="submission_path">
+			<div class="form-group">
+				<div class="row">
+					<div class="col-xs-2">
+						<label for="timeout">timeout:</label>
+						<input type="text" id="timeout" class="form-control" placeholder="30" name="timeout">
+					</div>
 
-				<label for="soft_deadline">soft_deadline:</label>
-				<input type="text" id="soft_deadline" name="soft_deadline">
+					<div class="col-xs-4">
+						<label for="submission_path">submission_path:</label>
+						<input type="text" id="submission_path" class="form-control" placeholder="/submission.zip" name="submission_path">
+					</div>
+				</div>
+			</div>
 
-				<label for="hard_deadline">hard_deadline:</label>
-				<input type="text" id="hard_deadline" name="hard_deadline">
+			<div class="form-group">
+				<div class="row">
+					<div class="col-xs-2">
+						<label for="soft_deadline">soft deadline:</label>
+						<input type="text" id="soft_deadline" class="form-control" placeholder="14.02.2017" name="soft_deadline">
+					</div>
 
-				<label for="daily_penalty">daily_penalty:</label>
-				<input type="text" id="daily_penalty" name="daily_penalty">
+					<div class="col-xs-2">
+						<label for="hard_deadline">hard deadline:</label>
+						<input type="text" id="hard_deadline" class="form-control" placeholder="24.02.2017" name="hard_deadline">
+					</div>
 
-				<button>create assignment</button>
-			</form>
-		</div>
-		<div>
-			<h5>add teacher</h5>
+					<div class="col-xs-2">
+						<label for="daily_penalty">daily penalty:</label>
+						<input type="text" id="daily_penalty" class="form-control" placeholder="5" name="daily_penalty">
+					</div>
+				</div>
+			</div>
 
-			<p>
-			{{range .Teachers}}
-			<span>{{.Username}}</span>
-			{{end}}
-			</p>
+			<button type="submit" class="btn btn-danger">create assignment</button>
+		</form>
+	</div>
+</div>
 
-			<form action="/-/{{$s.Id}}/add_teacher" method="post">
-				<label for="username">username:</label>
-				<input type="text" id="username" name="username">
+<div>
+	<h5>add teacher</h5>
 
-				<button>add teacher</button>
-			</form>
-		</div>
-		<div>
-			<h5>configure subject</h5>
-			TODO
-		</div>
-		{{end}}
-	</body>
-</html>
+	<p>
+	{{range .Teachers}}
+	<span>{{.Username}}</span>
+	{{end}}
+	</p>
+
+	<form action="/-/{{$s.Id}}/add_teacher" method="post">
+		<label for="username">username:</label>
+		<input type="text" id="username" name="username">
+
+		<button>add teacher</button>
+	</form>
+</div>
+<div>
+	<h5>configure subject</h5>
+	TODO
+</div>
+{{end}}
+{{end}}

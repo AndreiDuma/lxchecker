@@ -1,20 +1,15 @@
-<!DOCTYPE html>
-<html>
-	<head>
-		<title>Lxchecker - sign up</title>
-	</head>
+{{define "title"}}lxchecker :: signup{{end}}
 
-	<body>
-		<form action="/signup" method="post">
-			<label for="username">Username:</label>
-			<input type="text" id="username" name="username">
+{{define "contents"}}
+<form action="/signup" method="post">
+	<label for="username">Username:</label>
+	<input type="text" id="username" name="username">
 
-			<label for="password">Password:</label>
-			<input type="password" id="password" name="password">
+	<label for="password">Password:</label>
+	<input type="password" id="password" name="password">
 
-			<input type="hidden" name="continue" value="{{.ContinueURL}}">
+	<input type="hidden" name="continue" value="{{.ContinueURL}}">
 
-			<button>Sign up</button>
-		</form>
-	</body>
-</html>
+	<button>Sign up</button>
+</form>
+{{end}}

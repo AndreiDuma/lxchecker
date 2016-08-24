@@ -13,7 +13,7 @@ import (
 var (
 	validSubjectId = regexp.MustCompile(`[a-z]+[0-9a-z]+`)
 
-	subjectTmpl = template.Must(template.ParseFiles("templates/subject.html"))
+	subjectTmpl = template.Must(template.ParseFiles("templates/base.html", "templates/subject.html"))
 )
 
 func CreateSubjectHandler(w http.ResponseWriter, r *http.Request) {

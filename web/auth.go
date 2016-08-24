@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	loginTmpl  = template.Must(template.ParseFiles("templates/login.html"))
-	signupTmpl = template.Must(template.ParseFiles("templates/signup.html"))
+	loginTmpl  = template.Must(template.ParseFiles("templates/base.html", "templates/login.html"))
+	signupTmpl = template.Must(template.ParseFiles("templates/base.html", "templates/signup.html"))
 )
 
 // LoginTmplHandler serves the login page.

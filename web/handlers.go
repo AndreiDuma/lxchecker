@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	indexTmpl = template.Must(template.ParseFiles("templates/index.html"))
+	indexTmpl = template.Must(template.ParseFiles("templates/base.html", "templates/index.html"))
 )
 
 func LandingHandler(w http.ResponseWriter, r *http.Request) {
