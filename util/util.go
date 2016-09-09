@@ -44,12 +44,6 @@ func GetRequestData(r *http.Request) *RequestData {
 	return rd
 }
 
-// CurrentUser returns the currently logged in user or nil if there is none.
-func CurrentUser(r *http.Request) *db.User {
-	user, _ := context.Get(r, "user").(*db.User)
-	return user
-}
-
 // RequireAuth middleware makes sure users are logged in by first redirecting
 // them to the login page.
 func RequireAuth(next http.Handler) http.Handler {

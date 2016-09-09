@@ -41,7 +41,10 @@
 		<tr>
 			<td class="col-md-4"><a href="/-/{{$s.Id}}/{{$a.Id}}/{{$sbm.Id}}/">{{$sbm.Id}}</a></td>
 			<td>
-				{{if eq $sbm.Status "done"}}<span class="label label-success">done</span>{{end}}
+				{{if eq $sbm.Status "done"}}
+				<span class="label label-success">done</span>
+				<span class="label label-default">score by tests: {{$sbm.ScoreByTests}}</span>
+				{{end}}
 				{{if eq $sbm.Status "pending"}}<span class="label label-warning">pending</span>{{end}}
 				{{if eq $sbm.Status "failed"}}<span class="label label-danger">failed</span>{{end}}
 

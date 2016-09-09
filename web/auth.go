@@ -89,9 +89,17 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 // SignupTmplHandler serves the sign up page.
 func SignupTmplHandler(w http.ResponseWriter, r *http.Request) {
 	continueURL := r.FormValue("continue")
+	loginURL := "/login"
+	if continueURL != "" {
+		loginURL = "/login?continue=" + continueURL
+	}
 	signupTmpl.Execute(w, struct {
 		ContinueURL string
-	}{continueURL})
+		LoginURL    string
+	}{
+		continueURL,
+		loginURL,
+	})
 }
 
 // SignupHandler creates a new account.

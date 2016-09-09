@@ -81,7 +81,6 @@ func (scheduler *Scheduler) Submit(ctx context.Context, options SubmitOptions) (
 		return r, fmt.Errorf("Error while waiting for image pull to finish: %v", err)
 	}
 	reader.Close()
-	_ = ioutil.Discard
 
 	// create the container
 	config := &container.Config{

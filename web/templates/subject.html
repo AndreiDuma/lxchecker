@@ -9,13 +9,22 @@
 	<li><a href="/-/{{$s.Id}}/">{{$s.Name}}</a></li>
 </ol>
 
-<ul>
-	{{range $a := .Assignments}}
-	<li><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></li>
-	{{else}}
-	no assignments
-	{{end}}
-</ul>
+<div class="panel panel-default">
+	<div class="panel-heading">assignments</div>
+	<table class="table">
+		{{range $a := .Assignments}}
+		<tr>
+			<td class="col-md-6"><a href="/-/{{$s.Id}}/{{$a.Id}}/">{{$a.Name}}</a></td>
+			<td class="col-md-3">{{$a.SoftDeadline.Format "Monday, 02.01.2006, 15:04"}}</td>
+			<td class="col-md-3">{{$a.HardDeadline.Format "Monday, 02.01.2006, 15:04"}}</td>
+		</tr>
+		{{else}}
+		<tr>
+			<td>no assignments</td>
+		</tr>
+		{{end}}
+	</table>
+</div>
 
 {{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
 <div class="panel panel-danger">
@@ -81,25 +90,27 @@
 	</div>
 </div>
 
-<div>
-	<h5>add teacher</h5>
+<div class="panel panel-danger">
+	<div class="panel-heading">add teacher - current teachers are:
+		{{range $i, $t := .Teachers}}
+		{{if gt $i 0}}, {{end}}
+		<strong>{{$t.Username}}</strong>
+		{{end}}
+	</div>
+	<div class="panel-body">
+		<form action="/-/{{$s.Id}}/add_teacher" method="post">
+			<div class="form-group">
+				<div class="row">
+					<div class="col-xs-3">
+						<label for="username">username:</label>
+						<input type="text" id="username" class="form-control" placeholder="new_teacher" name="username">
+					</div>
+				</div>
+			</div>
 
-	<p>
-	{{range .Teachers}}
-	<span>{{.Username}}</span>
-	{{end}}
-	</p>
-
-	<form action="/-/{{$s.Id}}/add_teacher" method="post">
-		<label for="username">username:</label>
-		<input type="text" id="username" name="username">
-
-		<button>add teacher</button>
-	</form>
-</div>
-<div>
-	<h5>configure subject</h5>
-	TODO
+			<button type="submit" class="btn btn-danger">add teacher</button>
+		</form>
+	</div>
 </div>
 {{end}}
 {{end}}

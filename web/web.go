@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
 	"github.com/AndreiDuma/lxchecker/db"
@@ -61,5 +62,5 @@ func main() {
 	}
 
 	log.Printf("Listening on %s...\n", host)
-	log.Fatalln(http.ListenAndServe(host, router))
+	log.Fatalln(http.ListenAndServe(host, handlers.RecoveryHandler(handlers.PrintRecoveryStack(true))(router)))
 }

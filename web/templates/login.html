@@ -1,16 +1,28 @@
 {{define "title"}}lxchecker :: login{{end}}
 
 {{define "contents"}}
-<form action="/login" method="post">
-	<label for="username">Username:</label>
-	<input type="text" id="username" name="username">
+<div class="row">
+	<div class="col-md-4 col-md-offset-4">
+		<br/>
+		<h1>lxchecker</h1>
+		<br/>
+		<form action="/login" method="post">
+			<div class="form-group">
+				<label for="username">Username:</label>
+				<input type="text" class="form-control" id="username" name="username">
+			</div>
 
-	<label for="password">Password:</label>
-	<input type="password" id="password" name="password">
+			<div class="form-group">
+				<label for="password">Password:</label>
+				<input type="password" class="form-control" id="password" name="password">
+			</div>
 
-	<input type="hidden" name="continue" value="{{.ContinueURL}}">
+			<input type="hidden" name="continue" value="{{.ContinueURL}}">
 
-	<button>Log in</button>
-</form>
-<p>or <a href="{{.SignupURL}}">sign up</a></p>
+			<button type="submit" class="btn btn-primary form-control">log in</button>
+		</form>
+		<br/>
+		<div class="text-center">or <a href="{{.SignupURL}}">sign up</a></div>
+	</div>
+</div>
 {{end}}
