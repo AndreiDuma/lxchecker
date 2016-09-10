@@ -9,6 +9,12 @@ import (
 	"github.com/AndreiDuma/lxchecker/db"
 	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
+)
+
+var (
+	// TODO: make this key private.
+	cookieStore = sessions.NewCookieStore([]byte("super-secret-key"))
 )
 
 type RequestData struct {
@@ -54,7 +60,7 @@ func RequireAuth(next http.Handler) http.Handler {
 			http.Redirect(w, r, loginURL, http.StatusFound)
 		}
 
-		session, err := config.CookieStore.Get(r, "auth")
+		session, err := cookieStore.Get(r, "auth")
 		if err != nil {
 			requireLogin()
 			return
