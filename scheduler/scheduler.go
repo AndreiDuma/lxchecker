@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/docker/docker/tree/master/api/types"
-	"github.com/docker/docker/tree/master/api/types/container"
-	"github.com/docker/docker/tree/master/client"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
 )
 
@@ -99,17 +99,12 @@ func (scheduler *Scheduler) Submit(ctx context.Context, options SubmitOptions) (
 	}
 
 	// copy submission to container
-	copyOptions := types.CopyToContainerOptions{
-		ContainerID: container.ID,
-		Path:        "/",
-		Content:     tar,
-	}
-	if err = scheduler.cli.CopyToContainer(ctx, copyOptions); err != nil {
+	if err = scheduler.cli.CopyToContainer(ctx, container.ID, "/", tar, types.CopyToContainerOptions{}); err != nil {
 		return r, fmt.Errorf("Failed to copy submission to container: %v", err)
 	}
 
 	// start the container
-	if err = scheduler.cli.ContainerStart(ctx, container.ID); err != nil {
+	if err = scheduler.cli.ContainerStart(ctx, container.ID, types.ContainerStartOptions{}); err != nil {
 		return r, fmt.Errorf("Failed to start container: %v", err)
 	}
 
