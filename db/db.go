@@ -16,7 +16,7 @@ var (
 
 func Init() {
 	var err error
-	if mongo, err = mgo.Dial("localhost"); err != nil {
+	if mongo, err = mgo.Dial("db"); err != nil {
 		log.Fatalln("failed to connect to MongoDB")
 	}
 

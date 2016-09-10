@@ -22,3 +22,17 @@ Assignment checking using Linux Containers
 * create RequireAdmin middleware for POSTs
 * create RequireTeacher middleware for POSTs
 * remove mgo references outside of package db (like mgo.ErrNotFound)
+
+## How to install Lxchecker
+
+### MongoDB
+
+  $ docker run -d --name db mongo
+
+### Docker Swarm
+
+  TODO
+
+### Lxchecker
+
+  $ docker run -d --name lxchecker --link db -p 80:8080 lxchecker/lxchecker
