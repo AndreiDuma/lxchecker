@@ -1,11 +1,11 @@
-package main
+package web
 
 import (
 	"html/template"
 	"net/http"
 
-	"github.com/AndreiDuma/lxchecker"
 	"github.com/AndreiDuma/lxchecker/db"
+	"github.com/AndreiDuma/lxchecker/util"
 )
 
 var (
@@ -65,7 +65,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set auth cookie.
-	session, _ := config.CookieStore.Get(r, "auth")
+	session, _ := util.CookieStore.Get(r, "auth")
 	session.Values["username"] = username
 	session.Save(r, w)
 
@@ -80,7 +80,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 // LogoutHandler delete's a user's session, logging them out.
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	session, _ := config.CookieStore.Get(r, "auth")
+	session, _ := util.CookieStore.Get(r, "auth")
 	session.Options.MaxAge = -1
 	session.Save(r, w)
 	http.Redirect(w, r, "/login", http.StatusFound)
@@ -140,7 +140,7 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set auth cookie.
-	session, _ := config.CookieStore.Get(r, "auth")
+	session, _ := util.CookieStore.Get(r, "auth")
 	session.Values["username"] = u.Username
 	session.Save(r, w)
 

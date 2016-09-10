@@ -52,7 +52,3 @@ func Init() {
 		log.Fatalln("failed to ensure an unique index on collection `teachers`, keys `username`, `subject_id`")
 	}
 }
-
-func Done() {
-	defer mongo.Close()
-}

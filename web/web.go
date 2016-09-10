@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	"log"
@@ -21,14 +21,13 @@ var (
 	router = mux.NewRouter().StrictSlash(true)
 )
 
-func main() {
+func Start() {
 	// Connect to Docker.
 	sched = scheduler.New()
 
 	// Connect to MongoDB.
 	// TODO: customizable Mongo host.
 	db.Init()
-	defer db.Done()
 
 	// Setup handlers.
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static/"))))
