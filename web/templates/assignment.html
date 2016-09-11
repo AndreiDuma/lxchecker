@@ -93,7 +93,7 @@
 </div>
 
 <div class="panel panel-default">
-	<div class="panel-heading">all submissions (TODO: make collapsable)</div>
+	<div class="panel-heading">all submissions</div>
 	<table class="table">
 		{{range $sbm := .AllSubmissions}}
 		<tr>
@@ -134,6 +134,7 @@
 	</div>
 </div>
 
+{{/*
 {{if (or $rd.UserIsTeacher $rd.UserIsAdmin)}}
 <div class="panel panel-default">
 	<div class="panel-heading">configure assignment</div>
@@ -142,5 +143,6 @@
 	</div>
 </div>
 {{end}}
+*/}}
 
 {{end}}
